@@ -1,11 +1,10 @@
-﻿# Telegram Bot Token (Buni o'zgartirmang)
-TELEGRAM_TOKEN = ""
+import os
 
-# AI Modeli
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "")
+ADMIN_ID = int(os.getenv("ADMIN_ID", "1819574194"))
+CARD_NUMBER = os.getenv("CARD_NUMBER", "")
+CARD_HOLDER = os.getenv("CARD_HOLDER", "ZAFARJON XATAMOV")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+CLAUDE_API_KEY = os.getenv("CLAUDE_API_KEY", "")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 AI_MODEL = "gpt-3.5-turbo"
-ADMIN_ID =  1819574194        # Sizning Telegram ID raqamingiz (raqam bo'lishi kerak)
-CARD_NUMBER = ""   # Sizning Uzcard/Humo karta raqamingiz
-CARD_HOLDER = "ZAFARJON XATAMOV"          # Karta egasining ismi
-OPENAI_API_KEY = ""
-CLAUDE_API_KEY = ""
-GEMINI_API_KEY = ""
