@@ -16,17 +16,16 @@ from database import (
 logging.basicConfig(level=logging.INFO)
 
 PRICES = {
-    "Dars ishlanmasi": 2999, "Maqola": 19999, "Tezis": 9999,
+    "Dars ishlanmasi": 4000, "Maqola": 19999, "Tezis": 9999,
     "Mavzu bo'yicha slayd": 4999, "Mustaqil ish": 9999, "Kurs ishi": 29999,
     "Bitiruv malakaviy ishi": 199999, "Magistrlik dissertatsiyasi": 799999,
-    "PhD dissertatsiya": 11000000, "Uslubiy qo'llanma": 599999,
-    "O'quv qo'llanma": 999999, "Darslik": 2999999
+    "Uslubiy qo'llanma": 599999
 }
 
 CATEGORIES = [
     ["Dars ishlanmasi", "Maqola"], ["Tezis", "Uslubiy qo'llanma"],
-    ["O'quv qo'llanma", "Darslik"], ["Mustaqil ish", "Mavzu bo'yicha slayd"],
-    ["Kurs ishi", "Bitiruv malakaviy ishi"], ["Magistrlik dissertatsiyasi", "PhD dissertatsiya"],
+    ["Mustaqil ish", "Mavzu bo'yicha slayd"],
+    ["Kurs ishi", "Bitiruv malakaviy ishi"], ["Magistrlik dissertatsiyasi"],
     ["🌐 Til / Language"],
     ["💳 Balansni to'ldirish", "Balansni tekshirish"]
 ]
@@ -50,10 +49,33 @@ LANGUAGE_KEYBOARD = [
     ["⬅️ Orqaga"],
 ]
 
+# --- DARS ISHLANMASI TURLARI VA NARXLARI ---
+SUBTYPE_CATEGORIES = ["Dars ishlanmasi", "Mavzu bo'yicha slayd"]
+
+DARS_TURI_MAP = {
+    "📖 Ma'ruza": "Ma'ruza",
+    "🛠 Amaliy mashg'ulot": "Amaliy mashg'ulot",
+    "💬 Seminar": "Seminar",
+    "🔬 Laboratoriya mashg'uloti": "Laboratoriya mashg'uloti",
+}
+
+DARS_TURI_PRICES = {
+    "Ma'ruza": 6000,
+    "Amaliy mashg'ulot": 4000,
+    "Seminar": 5000,
+    "Laboratoriya mashg'uloti": 5000
+}
+
+DARS_TURI_KEYBOARD_ROWS = [
+    ["📖 Ma'ruza"],
+    ["🛠 Amaliy mashg'ulot"],
+    ["💬 Seminar"],
+    ["🔬 Laboratoriya mashg'uloti"],
+    ["⬅️ Orqaga"],
+]
+
 # ==========================================================
 #  MENYU TUGMALARI TARJIMASI (7 TIL)
-#  Kalit — har doim o'zbekcha (kanonik) nom, u PRICES va
-#  ai_handler.py bilan mos kelishi shart.
 # ==========================================================
 
 CATEGORY_TRANSLATIONS = {
@@ -97,25 +119,10 @@ CATEGORY_TRANSLATIONS = {
         "kaa": "Magistrlik dissertaciyası", "kg": "Магистрдик диссертация",
         "kk": "Магистрлік диссертация", "tg": "Диссертатсияи магистрӣ",
     },
-    "PhD dissertatsiya": {
-        "ru": "Докторская диссертация (PhD)", "en": "PhD Dissertation",
-        "kaa": "PhD dissertaciya", "kg": "PhD диссертация",
-        "kk": "PhD диссертациясы", "tg": "Диссертатсияи PhD",
-    },
     "Uslubiy qo'llanma": {
         "ru": "Методическое пособие", "en": "Methodological Guide",
         "kaa": "Ádistemelik qollanba", "kg": "Усулдук колдонмо",
         "kk": "Әдістемелік құрал", "tg": "Дастури методӣ",
-    },
-    "O'quv qo'llanma": {
-        "ru": "Учебное пособие", "en": "Study Guide",
-        "kaa": "Oqıw qollanba", "kg": "Окуу колдонмосу",
-        "kk": "Оқу құралы", "tg": "Дастури таълимӣ",
-    },
-    "Darslik": {
-        "ru": "Учебник", "en": "Textbook",
-        "kaa": "Sabaqlıq", "kg": "Окуу китеби",
-        "kk": "Оқулық", "tg": "Китоби дарсӣ",
     },
     "💳 Balansni to'ldirish": {
         "ru": "💳 Пополнить баланс", "en": "💳 Top Up Balance",
@@ -127,9 +134,28 @@ CATEGORY_TRANSLATIONS = {
         "kaa": "Balanstı tekseriw", "kg": "Балансты текшерүү",
         "kk": "Балансты тексеру", "tg": "Санҷиши баланс",
     },
+    "📖 Ma'ruza": {
+        "ru": "📖 Лекция", "en": "📖 Lecture",
+        "kaa": "📖 Lekciya", "kg": "📖 Лекция",
+        "kk": "📖 Дәріс", "tg": "📖 Лексия",
+    },
+    "🛠 Amaliy mashg'ulot": {
+        "ru": "🛠 Практическое занятие", "en": "🛠 Practical Session",
+        "kaa": "🛠 Ámeliy sabaq", "kg": "🛠 Практикалык сабак",
+        "kk": "🛠 Тәжірибелік сабақ", "tg": "🛠 Машғулоти амалӣ",
+    },
+    "💬 Seminar": {
+        "ru": "💬 Семинар", "en": "💬 Seminar",
+        "kaa": "💬 Seminar", "kg": "💬 Семинар",
+        "kk": "💬 Семинар", "tg": "💬 Семинар",
+    },
+    "🔬 Laboratoriya mashg'uloti": {
+        "ru": "🔬 Лабораторное занятие", "en": "🔬 Laboratory Session",
+        "kaa": "🔬 Laboratoriya sabaǵı", "kg": "🔬 Лабораториялык сабак",
+        "kk": "🔬 Зертханалық сабақ", "tg": "🔬 Машғулоти лабораторӣ",
+    },
 }
 
-# Har bir tarjimadan kanonik (o'zbekcha) nomga qaytadigan teskari lug'at
 REVERSE_TRANSLATIONS = {}
 for _canonical, _langs in CATEGORY_TRANSLATIONS.items():
     REVERSE_TRANSLATIONS[_canonical] = _canonical
@@ -138,23 +164,53 @@ for _canonical, _langs in CATEGORY_TRANSLATIONS.items():
 
 
 def tr(canonical_text, lang_code):
-    """Kanonik (o'zbekcha) matnni tanlangan tilga tarjima qiladi."""
     return CATEGORY_TRANSLATIONS.get(canonical_text, {}).get(lang_code, canonical_text)
 
 
+CATEGORY_EMOJIS = {
+    "Dars ishlanmasi": "📝",
+    "Maqola": "📄",
+    "Tezis": "📃",
+    "Uslubiy qo'llanma": "📘",
+    "Mustaqil ish": "✍️",
+    "Mavzu bo'yicha slayd": "🖥️",
+    "Kurs ishi": "📑",
+    "Bitiruv malakaviy ishi": "🎓",
+    "Magistrlik dissertatsiyasi": "🎖️",
+    "Balansni tekshirish": "💰",
+}
+
+
 def build_categories_keyboard(lang_code):
-    """Foydalanuvchi tiliga mos tarjima qilingan asosiy menyuni quradi."""
     rows = [
         ["Dars ishlanmasi", "Maqola"],
         ["Tezis", "Uslubiy qo'llanma"],
-        ["O'quv qo'llanma", "Darslik"],
         ["Mustaqil ish", "Mavzu bo'yicha slayd"],
         ["Kurs ishi", "Bitiruv malakaviy ishi"],
-        ["Magistrlik dissertatsiyasi", "PhD dissertatsiya"],
+        ["Magistrlik dissertatsiyasi"],
         ["🌐 Til / Language"],
         ["💳 Balansni to'ldirish", "Balansni tekshirish"],
     ]
-    translated_rows = [[tr(item, lang_code) for item in row] for row in rows]
+
+    def _label(item):
+        translated = tr(item, lang_code)
+        emoji = CATEGORY_EMOJIS.get(item)
+        return f"{emoji} {translated}" if emoji else translated
+
+    translated_rows = [[_label(item) for item in row] for row in rows]
+    return ReplyKeyboardMarkup(translated_rows, resize_keyboard=True)
+
+
+_ALL_LANGS = ["uz", "ru", "en", "kaa", "kg", "kk", "tg"]
+for _canonical, _emoji in CATEGORY_EMOJIS.items():
+    for _lc in _ALL_LANGS:
+        _translated = tr(_canonical, _lc)
+        _labeled = f"{_emoji} {_translated}"
+        REVERSE_TRANSLATIONS[_labeled] = _canonical
+
+
+def build_dars_turi_keyboard(lang_code):
+    translated_rows = [[tr(item, lang_code) for item in row] for row in DARS_TURI_KEYBOARD_ROWS]
     return ReplyKeyboardMarkup(translated_rows, resize_keyboard=True)
 
 
@@ -174,12 +230,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = update.message.from_user.id
     text = update.message.text
 
-    # Foydalanuvchi tilida ko'rsatilgan tugma matnini kanonik (o'zbekcha) nomga aylantiramiz
     text = REVERSE_TRANSLATIONS.get(text, text)
-
     user_lang = get_language(uid)
 
-    # --- Til tanlash menyusini ochish ---
     if text == "🌐 Til / Language":
         await update.message.reply_text(
             "🌐 Tilni tanlang / Выберите язык / Choose a language:",
@@ -187,7 +240,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # --- Orqaga qaytish ---
     if text == "⬅️ Orqaga":
         await update.message.reply_text(
             "Bosh menyu:",
@@ -195,7 +247,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # --- Foydalanuvchi tilni tanladi ---
     if text in LANGUAGE_OPTIONS:
         lang_code = LANGUAGE_OPTIONS[text]
         set_language(uid, lang_code)
@@ -205,7 +256,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # --- Balansni to'ldirish tugmasi bosilganda ---
     if text == "💳 Balansni to'ldirish":
         context.user_data['topup_state'] = TOPUP_WAITING_AMOUNT
         await update.message.reply_text(
@@ -213,7 +263,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # --- Foydalanuvchi to'ldirish summasini kiritmoqda ---
     if context.user_data.get('topup_state') == TOPUP_WAITING_AMOUNT:
         if not text.isdigit():
             await update.message.reply_text("⚠️ Iltimos, faqat raqam kiriting (masalan: 50000)")
@@ -234,8 +283,39 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"💰 ID: {uid}\n💰 Balans: {b} so'm")
         return
 
+    if text in SUBTYPE_CATEGORIES:
+        context.user_data['awaiting_dars_turi'] = True
+        context.user_data['pending_cat'] = text
+        display_cat = tr(text, user_lang)
+        await update.message.reply_text(
+            f"📚 {display_cat} turini tanlang:",
+            reply_markup=build_dars_turi_keyboard(user_lang)
+        )
+        return
+
+    if context.user_data.get('awaiting_dars_turi') and text in DARS_TURI_MAP:
+        context.user_data['awaiting_dars_turi'] = False
+        pending_cat = context.user_data.get('pending_cat', "Dars ishlanmasi")
+        context.user_data['cat'] = pending_cat
+        dars_turi_key = DARS_TURI_MAP[text]
+        context.user_data['dars_turi'] = dars_turi_key
+        
+        # Narxni dars turiga qarab belgilaymiz
+        price = DARS_TURI_PRICES.get(dars_turi_key, PRICES[pending_cat])
+        context.user_data['custom_price'] = price
+        
+        display_turi = tr(text, user_lang)
+        display_cat = tr(pending_cat, user_lang)
+        await update.message.reply_text(
+            f"✅ {display_cat} — {display_turi} tanlandi. Narxi: {price} so'm. Mavzuni yozing:",
+            reply_markup=build_categories_keyboard(user_lang)
+        )
+        return
+
     if text in PRICES:
         context.user_data['cat'] = text
+        context.user_data['dars_turi'] = None
+        context.user_data['custom_price'] = None
         display_name = tr(text, user_lang)
         await update.message.reply_text(f"✅ {display_name} tanlandi. Narxi: {PRICES[text]} so'm. Mavzuni yozing:")
         return
@@ -246,14 +326,16 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     bal = get_balance(uid)
-    price = PRICES.get(cat, 0)
+    price = context.user_data.get('custom_price') or PRICES.get(cat, 0)
 
     if bal < price:
         await update.message.reply_text(f"❌ Mablag' yetarli emas! Sizda: {bal} so'm. Kerak: {price} so'm.")
         return
 
+    dars_turi = context.user_data.get('dars_turi')
+    ai_context = f"{cat} - {dars_turi}" if (cat in SUBTYPE_CATEGORIES and dars_turi) else cat
+
     if is_long_document(cat):
-        # Katta hajmli hujjat — bo'lim-bo'lim (bob-bob) generatsiya qilinadi
         status_msg = await update.message.reply_text(
             "⏳ Bu turdagi hujjat bir necha bo'limdan iborat va bo'lim-bo'lim "
             "yaratiladi. Bu biroz vaqt olishi mumkin (bir necha daqiqa)...\n\n"
@@ -290,7 +372,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             pass
     else:
         await update.message.reply_text("⏳ AI ishlamoqda...")
-        resp = get_ai_response(text, context=cat, language=user_lang)
+        resp = get_ai_response(text, context=ai_context, language=user_lang)
 
     update_balance(uid, -price)
     await update.message.reply_text(resp[:4000])
@@ -308,11 +390,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def handle_screenshot(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Foydalanuvchi to'lov chekini (rasm) yuborganda ishlaydi."""
     uid = update.message.from_user.id
 
     if context.user_data.get('topup_state') != TOPUP_WAITING_SCREENSHOT:
-        return  # Kutilmagan rasm, e'tiborsiz qoldiramiz
+        return
 
     amount = context.user_data.get('topup_amount', 0)
     file_id = update.message.photo[-1].file_id
@@ -351,7 +432,6 @@ async def handle_screenshot(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def handle_admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Admin 'Tasdiqlash' yoki 'Rad etish' tugmasini bosganda ishlaydi."""
     query = update.callback_query
     await query.answer()
 
