@@ -23,7 +23,7 @@ LANGUAGE_NAMES = {
     "ru": "rus (Русский)",
     "en": "ingliz (English)",
     "kaa": "qoraqalpoq (Qaraqalpaqsha)",
-    "kg": "qirg'iz (Кыргызча)",
+    "kg": "qirg'iz (Кыргызcha)",
     "kk": "qozoq (Қазақша)",
     "tg": "tojik (Тоҷикӣ)",
 }
@@ -57,7 +57,7 @@ def _try_claude(system_prompt, prompt):
         "content-type": "application/json",
     }
     payload = {
-        "model": "claude-sonnet-4-6",
+        "model": "claude-3-5-sonnet-20240620",
         "max_tokens": 8192,
         "system": system_prompt,
         "messages": [{"role": "user", "content": prompt}]
@@ -144,209 +144,98 @@ Mustaqil ish uchun quyidagi tuzilishda yozing:
 """,
 
     "Kurs ishi": """
-Kurs ishi uchun quyidagi to'liq akademik tuzilishda yozing (hajmi 30-35 bet ga mo'ljallangan,
+Kurs ishi uchun quyidagi to'liq akademik tuzilishda yozing (hajmi 30-35 betga mo'ljallangan, 
 shuning uchun har bir qismni imkon qadar batafsil yoriting):
 1. Mundarija
 2. Kirish (mavzuning dolzarbligi, ishning maqsadi va vazifalari, tadqiqot ob'ekti/predmeti)
 3. I BOB — Nazariy qism (mavzu bo'yicha ilmiy adabiyotlar tahlili, asosiy tushunchalar)
 4. II BOB — Amaliy/tahliliy qism (masala yechimi, misollar, tahlil, statistik yoki amaliy ma'lumotlar)
 5. Xulosa va takliflar
-6. Foydalanilgan adabiyotlar ro'yxati (kamida 8-10 ta manba)
-7. Ilovalar (agar kerak bo'lsa, qaysi turdagi ilova kerakligini ko'rsating)
+6. Foydalanilgan adabiyotlar ro'yxati (kamida 10-15 ta manba)
 """,
 
     "Bitiruv malakaviy ishi": """
-Bitiruv malakaviy ishi (BMI) uchun quyidagi rasmiy OAK talablariga mos, TO'LIQ va BATAFSIL
-akademik tuzilishda yozing (umumiy hajmi 70-80 betga mo'ljallangan, shuning uchun har bir
-kichik bo'limni (masalan 1.1, 1.2) alohida, chuqur va keng yoriting):
+Bitiruv malakaviy ishi (BMI) uchun quyidagi rasmiy OAK talablariga mos, TO'LIQ va BATAFSIL 
+akademik tuzilishda yozing (umumiy hajmi 70-80 betga mo'ljallangan):
 
 MUNDARIJA (I, II, III bob asosida)
-
-KIRISH
-- Mavzuning dolzarbligi va zarurati
-- Tadqiqotning maqsadi va vazifalari
-- Tadqiqot ob'ekti va predmeti
-- Ishning ilmiy-amaliy ahamiyati
+KIRISH (dolzarblik, maqsad, ob'ekt/predmet)
 
 I BOB (nazariy-metodologik asoslar)
-  1.1. (kichik mavzu — mavzuning nazariy asoslari)
-  1.2. (kichik mavzu — mavzu bo'yicha ilmiy qarashlar tahlili)
-  1.3. (kichik mavzu — xorijiy va mahalliy tajriba)
+  1.1, 1.2, 1.3 (kichik mavzular)
   I bob bo'yicha xulosa
 
 II BOB (amaliy tahlil)
-  2.1. (kichik mavzu — hozirgi holat tahlili)
-  2.2. (kichik mavzu — statistik/amaliy ma'lumotlar tahlili)
-  2.3. (kichik mavzu — muammolarni aniqlash)
+  2.1, 2.2, 2.3 (kichik mavzular)
   II bob bo'yicha xulosa
 
 III BOB (takomillashtirish yo'llari)
-  3.1. (kichik mavzu — takliflar va tavsiyalar)
-  3.2. (kichik mavzu — amalga oshirish mexanizmi)
-  3.3. (kichik mavzu — kutilayotgan natijalar)
+  3.1, 3.2, 3.3 (kichik mavzular)
   III bob bo'yicha xulosa
 
 UMUMIY XULOSA
-FOYDALANILGAN ADABIYOTLAR RO'YXATI (kamida 15-20 ta manba)
-GLOSSARIY (asosiy atamalar va ta'riflari)
-ILOVALAR
+FOYDALANILGAN ADABIYOTLAR RO'YXATI (kamida 20-30 ta manba)
+GLOSSARIY (asosiy atamalar)
 """,
 
     "Magistrlik dissertatsiyasi": """
-Magistrlik dissertatsiyasi uchun yuqori ilmiy darajadagi, TO'LIQ va JUDA BATAFSIL akademik
-tuzilishda yozing (umumiy hajmi 125-130 betga mo'ljallangan, shuning uchun har bir kichik
-bo'limni (masalan 1.1, 1.2, 1.3) alohida, chuqur, keng va ilmiy asoslangan tarzda yoriting):
+Magistrlik dissertatsiyasi uchun yuqori ilmiy darajadagi, TO'LIQ va JUDA BATAFSIL akademik 
+tuzilishda yozing (125-130 ta manba asosida):
 
 MUNDARIJA (I, II, III bob asosida)
-
-KIRISH
-- Mavzuning dolzarbligi
-- Ilmiy muammoning qo'yilishi
-- Tadqiqotning maqsadi va vazifalari
-- Tadqiqot ob'ekti, predmeti va metodologiyasi
-- Ilmiy yangiligi
-- Nazariy va amaliy ahamiyati
+KIRISH (dolzarblik, maqsad, ilmiy yangilik, metodologiya, ob'ekt/predmet)
 
 I BOB (ilmiy-nazariy tahlil)
-  1.1. (kichik mavzu — mavzuning nazariy-metodologik asoslari)
-  1.2. (kichik mavzu — mavjud tadqiqotlar va ilmiy qarashlar sharhi)
-  1.3. (kichik mavzu — xorijiy va mahalliy tajriba tahlili)
+  1.1, 1.2, 1.3 (kichik mavzular)
   I bob bo'yicha xulosa
 
 II BOB (metodologiya va empirik tahlil)
-  2.1. (kichik mavzu — tadqiqot metodologiyasi)
-  2.2. (kichik mavzu — ma'lumotlar to'plash va tahlil usullari)
-  2.3. (kichik mavzu — empirik natijalarning dastlabki tahlili)
+  2.1, 2.2, 2.3 (kichik mavzular)
   II bob bo'yicha xulosa
 
 III BOB (natijalar va tavsiyalar)
-  3.1. (kichik mavzu — natijalarning ilmiy talqini)
-  3.2. (kichik mavzu — amaliy tavsiyalar)
-  3.3. (kichik mavzu — qo'llanish istiqbollari)
+  3.1, 3.2, 3.3 (kichik mavzular)
   III bob bo'yicha xulosa
 
 UMUMIY XULOSA
-FOYDALANILGAN ADABIYOTLAR RO'YXATI (125-130 ta manba, ko'pchiligi xalqaro nashrlardan)
-GLOSSARIY (asosiy ilmiy atamalar va ta'riflari)
-ILOVALAR
+FOYDALANILGAN ADABIYOTLAR RO'YXATI (125-130 ta manba)
+GLOSSARIY
 """,
 
     "PhD dissertatsiya": """
-PhD (falsafa doktori) dissertatsiyasi uchun eng yuqori ilmiy standartlarga mos, TO'LIQ va
-ENG BATAFSIL akademik tuzilishda yozing (umumiy hajmi 130-140 betga mo'ljallangan, shuning
-uchun har bir kichik bo'limni chuqur ilmiy tahlil, gipoteza tekshiruvi va argumentatsiya
-bilan yoriting):
+PhD (falsafa doktori) dissertatsiyasi uchun eng yuqori ilmiy standartlarga mos, TO'LIQ va 
+ENG BATAFSIL akademik tuzilishda yozing (hajmi 130-140 bet):
 
 MUNDARIJA (I, II, III, IV bob asosida)
+KIRISH (dolzarblik, maqsad, ilmiy yangilik, metodologiya, ob'ekt/predmet)
+Gipoteza va himoyaga chiqariladigan holatlar
 
-KIRISH
-- Muammoning qo'yilishi va dolzarbligi
-- Tadqiqot muammosi va ilmiy gipoteza
-- Tadqiqotning maqsadi va vazifalari
-- Tadqiqot ob'ekti va predmeti
-- Tadqiqot metodologiyasi
-- Ilmiy yangiligi
-- Himoyaga chiqariladigan asosiy holatlar
-- Ishning nazariy va amaliy ahamiyati
-- Natijalarning aprobatsiyasi (nashrlar, konferensiyalar haqida umumiy tavsif)
+I BOB, II BOB, III BOB (3.1 dan 3.6 gacha), IV BOB (4.1 dan 4.3 gacha)
+Har bir bob yakunida "Bob bo'yicha xulosa" bo'lishi shart.
 
-I BOB (adabiyotlar tahlili va nazariy-metodologik asos)
-  1.1. (kichik mavzu — mavzu bo'yicha fundamental nazariyalar)
-  1.2. (kichik mavzu — xalqaro tadqiqotlar sharhi)
-  1.3. (kichik mavzu — nazariy asosning shakllanishi)
-  I bob bo'yicha xulosa
-
-II BOB (tadqiqot metodologiyasi)
-  2.1. (kichik mavzu — tadqiqot dizayni)
-  2.2. (kichik mavzu — ma'lumotlar to'plash usullari)
-  2.3. (kichik mavzu — tahlil metodlari va vositalari)
-  II bob bo'yicha xulosa
-
-III BOB (tadqiqot natijalari)
-  3.1. (kichik mavzu — asosiy empirik natijalar)
-  3.2. (kichik mavzu — natijalarning statistik/sifat tahlili)
-  3.3. (kichik mavzu — gipotezalarni tekshirish)
-  3.4. (kichik mavzu — natijalarning ilmiy-nazariy talqini)
-  3.5. (kichik mavzu — mavjud tadqiqotlar bilan qiyosiy tahlil)
-  3.6. (kichik mavzu — cheklovlar va ularni bartaraf etish yo'llari)
-  III bob bo'yicha xulosa
-
-IV BOB (amaliy tavsiyalar va qo'llanish istiqbollari)
-  4.1. (kichik mavzu — amaliy tavsiyalar)
-  4.2. (kichik mavzu — qo'llanish mexanizmi)
-  4.3. (kichik mavzu — kelgusi tadqiqotlar uchun yo'nalishlar)
-  IV bob bo'yicha xulosa
-
-UMUMIY XULOSA (asosiy ilmiy natijalarning yig'ma bayoni)
-FOYDALANILGAN ADABIYOTLAR RO'YXATI (130-140 ta manba, asosan xalqaro nashrlardan)
-GLOSSARIY (asosiy ilmiy atamalar va ta'riflari)
-ILOVALAR
-""",
-
-    "Uslubiy qo'llanma": """
-Uslubiy qo'llanma uchun quyidagi tuzilishda yozing:
-1. Kirish so'zi (qo'llanmaning maqsadi va kimlar uchun mo'ljallanganligi)
-2. Mundarija
-3. Mavzular bo'yicha metodik ko'rsatmalar (har bir mavzu uchun: maqsad, tushuntirish, misol)
-4. Amaliy mashg'ulotlar uchun tavsiyalar
-5. Nazorat savollari va topshiriqlar
-6. Baholash mezonlari
-7. Tavsiya etilgan adabiyotlar ro'yxati
+UMUMIY XULOSA
+FOYDALANILGAN ADABIYOTLAR RO'YXATI (130-140 ta manba)
+GLOSSARIY
 """,
 
     "O'quv qo'llanma": """
-O'quv qo'llanma uchun bitta silabus yoki bir nechta katta mavzularni qamrab oluvchi,
-TO'LIQ va JUDA BATAFSIL tuzilishda yozing (4-8 bobdan iborat, umumiy hajmi 170-240 betga
-mo'ljallangan, shuning uchun har bir kichik bo'limni chuqur va misollar bilan yoriting):
-
-MUQADDIMA (qo'llanmaning maqsadi va kimlar uchun mo'ljallanganligi)
-MUNDARIJA (boblar bo'yicha)
-
-Har bir BOB uchun (4-8 ta bob bo'lishi kerak):
-  I-BOB (masalan)
-    1.1. (kichik mavzu — nazariy material)
-    1.2. (kichik mavzu — nazariy material, misollar bilan)
-    1.3. (kichik mavzu — amaliy tahlil)
-    Bob bo'yicha xulosa
-    Bob bo'yicha nazorat savollari (5-10 ta)
-    Bob bo'yicha nazorat testlari (5-10 ta, variantlar bilan)
-
-(Shu tarzda barcha bobларни ketma-ket davom ettiring)
-
-YAKUNIY XULOSA
-GLOSSARIY (asosiy atamalar va ta'riflari)
-FOYDALANILGAN VA TAVSIYA ETILGAN ADABIYOTLAR RO'YXATI
+O'quv qo'llanma uchun (4-8 bob, hajmi 170-240 bet):
+1. Mundarija
+2. Kirish
+3. Har bir BOB uchun: Nazariya (1.1, 1.2, 1.3), Bob bo'yicha xulosa, Nazorat savollari va Testlar.
+4. Yakuniy xulosa, Adabiyotlar va Glossariy.
 """,
 
     "Darslik": """
-To'liq darslik uchun bitta fan dasturini to'liq qamrab oluvchi, ENG BATAFSIL va CHUQUR
-tuzilishda yozing (6-14 bobdan iborat, umumiy hajmi 170-440 betga mo'ljallangan, shuning
-uchun har bir kichik bo'limni maksimal darajada batafsil, misollar va amaliy masalalar
-bilan yoriting):
-
-MUQADDIMA (darslikning maqsadi, tuzilishi, fan dasturi bilan bog'liqligi, kimlar uchun
-mo'ljallanganligi)
-MUNDARIJA (boblar va kichik bo'limlar bo'yicha)
-
-Har bir BOB uchun (6-14 ta bob bo'lishi kerak):
-  I-BOB (masalan)
-    1.1. (kichik mavzu — nazariy qism, chuqur va tushunarli tarzda)
-    1.2. (kichik mavzu — nazariy qism, amaliy misollar bilan)
-    1.3. (kichik mavzu — qo'shimcha chuqurlashtirilgan material)
-    Bob bo'yicha xulosa
-    Bob bo'yicha nazorat savollari (8-12 ta)
-    Bob bo'yicha nazorat testlari (8-12 ta, variantlar bilan)
-
-(Shu tarzda barcha boblarni ketma-ket davom ettiring)
-
-UMUMIY XULOSA
-GLOSSARIY (barcha atamalar va ta'riflari)
-FOYDALANILGAN ADABIYOTLAR RO'YXATI
+To'liq darslik uchun (6-14 bob, hajmi 170-440 bet):
+1. Muqaddima va Mundarija
+2. Har bir BOB uchun: Nazariya (1.1, 1.2, 1.3), Bob bo'yicha xulosa, Nazorat savollari va Testlar.
+3. Umumiy xulosa, Adabiyotlar va Glossariy.
 """,
 }
 
 DEFAULT_STRUCTURE = """
-Mavzuni aniq, tushunarli va professional tarzda, kirish, asosiy qism va xulosadan
+Mavzuni aniq, tushunarli va professional tarzda, kirish, asosiy qism va xulosadan 
 iborat tuzilishda yoriting.
 """
 
@@ -354,7 +243,6 @@ iborat tuzilishda yoriting.
 def get_structure_guide(context):
     """Bo'lim nomiga mos akademik tuzilma (andoza) qaytaradi."""
     return STRUCTURE_GUIDES.get(context, DEFAULT_STRUCTURE)
-
 
 
 def _call_ai(system_prompt, prompt):
@@ -388,12 +276,9 @@ def get_ai_response(prompt, context="", language="uz"):
 
     system_prompt = (
         f"Siz akademik AI yordamchisiz. Bo'lim: {context}. "
-        f"MUHIM: Butun javobni albatta {lang_name} tilida yozing (sarlavhalar, "
-        f"bo'lim nomlari va matnning barcha qismlari ham shu tilda bo'lsin).\n"
-        "O'qituvchi va talabalar uchun professional, yaxshi tuzilgan va "
-        "grammatik jihatdan to'g'ri javob bering.\n\n"
-        f"YOZISH TARTIBI (albatta shu tuzilishga qat'iy amal qiling, lekin "
-        f"matnning o'zini {lang_name} tilida yozing):\n{structure}"
+        f"MUHIM: Butun javobni albatta {lang_name} tilida yozing.\n"
+        "O'qituvchi va talabalar uchun professional, yaxshi tuzilgan javob bering.\n\n"
+        f"YOZISH TARTIBI:\n{structure}"
     )
 
     try:
@@ -404,99 +289,39 @@ def get_ai_response(prompt, context="", language="uz"):
 
 # ==========================================================
 #  KATTA HAJMLI HUJJATLARNI BO'LIM-BO'LIM (BOB-BOB) YARATISH
-#  Har bir kichik bo'lim alohida AI so'rovi bilan yoziladi,
-#  so'ng barchasi birlashtirilib, to'liq hujjat hosil qilinadi.
 # ==========================================================
 
-def _chapter_sections(bob_nomi, sub_topics_count=3, has_tests=False):
-    """Bitta bob uchun kichik bo'limlar ro'yxatini generatsiya qiladi."""
-    sections = []
-    for i in range(1, sub_topics_count + 1):
-        sections.append(f"{bob_nomi} — {i}-band (kichik mavzu, chuqur va batafsil tahlil)")
-    sections.append(f"{bob_nomi} bo'yicha xulosa")
-    if has_tests:
-        sections.append(f"{bob_nomi} bo'yicha nazorat savollari (8-12 ta)")
-        sections.append(f"{bob_nomi} bo'yicha nazorat testlari (8-12 ta, variantlar bilan)")
-    return sections
-
-
-LONG_DOCUMENT_PLANS = {
-    "Kurs ishi": (
-        ["Kirish (dolzarblik, maqsad va vazifalar, tadqiqot ob'ekti/predmeti)"]
-        + _chapter_sections("I BOB (nazariy qism)", 2)
-        + _chapter_sections("II BOB (amaliy/tahliliy qism)", 2)
-        + ["Umumiy xulosa va takliflar", "Foydalanilgan adabiyotlar ro'yxati (8-10 ta manba)"]
-    ),
-    "Bitiruv malakaviy ishi": (
-        ["Kirish (dolzarblik, maqsad va vazifalar, tadqiqot ob'ekti/predmeti, ilmiy-amaliy ahamiyat)"]
-        + _chapter_sections("I BOB (nazariy-metodologik asoslar)", 3)
-        + _chapter_sections("II BOB (amaliy tahlil)", 3)
-        + _chapter_sections("III BOB (takomillashtirish yo'llari)", 3)
-        + ["Umumiy xulosa", "Foydalanilgan adabiyotlar ro'yxati (15-20 ta manba)", "Glossariy (asosiy atamalar)"]
-    ),
-    "Magistrlik dissertatsiyasi": (
-        ["Kirish (dolzarblik, ilmiy muammo, maqsad-vazifalar, ob'ekt/predmet, metodologiya, ilmiy yangilik, ahamiyat)"]
-        + _chapter_sections("I BOB (ilmiy-nazariy tahlil)", 3)
-        + _chapter_sections("II BOB (metodologiya va empirik tahlil)", 3)
-        + _chapter_sections("III BOB (natijalar va tavsiyalar)", 3)
-        + ["Umumiy xulosa", "Foydalanilgan adabiyotlar ro'yxati (25-30 ta manba)", "Glossariy (asosiy ilmiy atamalar)"]
-    ),
-    "PhD dissertatsiya": (
-        ["Kirish (muammo, gipoteza, maqsad-vazifalar, ob'ekt/predmet, metodologiya, ilmiy yangilik, "
-         "himoyaga chiqariladigan holatlar, ahamiyat, aprobatsiya)"]
-        + _chapter_sections("I BOB (adabiyotlar tahlili va nazariy-metodologik asos)", 3)
-        + _chapter_sections("II BOB (tadqiqot metodologiyasi)", 3)
-        + _chapter_sections("III BOB (tadqiqot natijalari)", 6)
-        + _chapter_sections("IV BOB (amaliy tavsiyalar va istiqbollar)", 3)
-        + ["Umumiy xulosa", "Foydalanilgan adabiyotlar ro'yxati (50+ manba)", "Glossariy (asosiy ilmiy atamalar)"]
-    ),
-    "O'quv qo'llanma": (
-        ["Muqaddima (qo'llanmaning maqsadi va kimlar uchun mo'ljallanganligi)"]
-        + _chapter_sections("I BOB", 3, has_tests=True)
-        + _chapter_sections("II BOB", 3, has_tests=True)
-        + _chapter_sections("III BOB", 3, has_tests=True)
-        + _chapter_sections("IV BOB", 3, has_tests=True)
-        + ["Yakuniy xulosa", "Glossariy (asosiy atamalar)", "Foydalanilgan va tavsiya etilgan adabiyotlar ro'yxati"]
-    ),
-    "Darslik": (
-        ["Muqaddima (darslikning maqsadi, tuzilishi, fan dasturi bilan bog'liqligi)"]
-        + _chapter_sections("I BOB", 3, has_tests=True)
-        + _chapter_sections("II BOB", 3, has_tests=True)
-        + _chapter_sections("III BOB", 3, has_tests=True)
-        + _chapter_sections("IV BOB", 3, has_tests=True)
-        + _chapter_sections("V BOB", 3, has_tests=True)
-        + _chapter_sections("VI BOB", 3, has_tests=True)
-        + ["Umumiy xulosa", "Glossariy (barcha atamalar)", "Foydalanilgan adabiyotlar ro'yxati"]
-    ),
-}
-
-
-def is_long_document(category):
-    """Bu bo'lim bo'lim-bo'lim generatsiya qilinishi kerakligini tekshiradi."""
-    return category in LONG_DOCUMENT_PLANS
-
-
-def generate_long_document(topic, category, progress_callback=None, language="uz"):
-    """
-    Katta hajmli hujjatlarni (Kurs ishi, BMI, Magistrlik, PhD, O'quv qo'llanma, Darslik)
-    bo'lim-bo'lim generatsiya qiladi va birlashtirib qaytaradi.
-
-    progress_callback(current, total, section_title) - har bir bo'lim tugagach chaqiriladi
-    (Telegram botda foydalanuvchiga progress ko'rsatish uchun ishlatiladi).
-    language - hujjat yoziladigan til kodi (uz, ru, en, kaa, kg, kk, tg)
-    """
-    plan = LONG_DOCUMENT_PLANS.get(category)
-    if not plan:
-        return get_ai_response(topic, context=category, language=language)
-
+def get_academic_plan(topic, work_type, language="uz"):
+    """Ish turiga qarab batafsil mundarija (plan) yaratadi."""
+    structure = get_structure_guide(work_type)
     lang_name = get_language_name(language)
 
+    system_prompt = (
+        f"Siz akademik reja tuzuvchisiz. Mavzu: {topic}. Ish turi: {work_type}.\n"
+        f"Faqat va faqat {lang_name} tilida javob bering.\n"
+        "Sizning vazifangiz — ushbu ish uchun juda batafsil mundarija (plan) tuzish.\n"
+        "Har bir bob va uning ichidagi kichik bo'limlarni (1.1, 1.2 va h.k.) aniq ko'rsating.\n"
+        "Faqat mundarija punktlarini qaytaring, ortiqcha matnsiz."
+    )
+    
+    try:
+        plan_text = _call_ai(system_prompt, f"'{topic}' mavzusi uchun {work_type} rejasini tuzing.")
+        return [line.strip() for line in plan_text.split('\n') if line.strip() and (line[0].isdigit() or "BOB" in line.upper() or "KIRISH" in line.upper() or "XULOSA" in line.upper())]
+    except Exception:
+        return []
+
+
+def generate_large_document(topic, work_type, language="uz", progress_callback=None):
+    """Katta hujjatni bo'lim-bo'lim yaratib birlashtiradi."""
+    plan = get_academic_plan(topic, work_type, language)
+    if not plan:
+        return "Reja tuzishda xatolik yuz berdi."
+
+    lang_name = get_language_name(language)
     base_system_prompt = (
-        f"Siz akademik AI yordamchisiz. Mavzu: \"{topic}\". Hujjat turi: {category}. "
-        f"MUHIM: Butun javobni albatta {lang_name} tilida yozing. "
-        "Professional, ilmiy uslubda va grammatik jihatdan to'g'ri yozing. "
-        "FAQAT so'ralgan bo'limga oid matnni yozing — boshqa bo'limlarni takrorlamang, "
-        "umumiy kirish so'zi yoki xulosa qo'shmang, faqat so'ralgan qism matnini bering."
+        f"Siz professional akademik yozuvchisiz. Ish turi: {work_type}.\n"
+        f"MUHIM: Faqat {lang_name} tilida yozing.\n"
+        "Sizga berilgan har bir bo'limni maksimal darajada batafsil, ilmiy va tushunarli yoritib bering."
     )
 
     total = len(plan)
@@ -504,30 +329,20 @@ def generate_long_document(topic, category, progress_callback=None, language="uz
 
     for idx, section_title in enumerate(plan, start=1):
         section_prompt = (
-            f"Mavzu: \"{topic}\"\n\n"
-            f"Quyidagi bo'lim uchun batafsil, professional va ilmiy asoslangan matn yozing:\n"
-            f"\"{section_title}\"\n\n"
-            "Matn kamida 300-500 so'zdan iborat, chuqur va mazmunli bo'lsin."
+            f"Mavzu: '{topic}'\nBo'lim: '{section_title}'\n\n"
+            "Ushbu bo'lim uchun kamida 500-1000 so'zdan iborat ilmiy matn yozing."
         )
         try:
             text = _call_ai(base_system_prompt, section_prompt)
-        except Exception as e:
-            text = f"[Ushbu bo'limni yaratishda xatolik yuz berdi: {e}]"
-
-        parts.append(f"\n\n{section_title.upper()}\n\n{text}")
+            parts.append(f"\n\n{section_title.upper()}\n\n{text}")
+        except Exception:
+            parts.append(f"\n\n{section_title.upper()}\n\n[Xatolik yuz berdi]")
 
         if progress_callback:
-            try:
-                progress_callback(idx, total, section_title)
-            except Exception:
-                pass
+            progress_callback(idx, total, section_title)
 
     return "".join(parts)
 
-
-# ==========================================================
-#  WORD FAYL YARATISH (o'zgarishsiz)
-# ==========================================================
 
 def create_word(title, content):
     doc = Document()
@@ -540,79 +355,38 @@ def create_word(title, content):
     return file_path
 
 
-# ==========================================================
-#  PEXELS ORQALI MAVZUGA MOS RASM TOPISH
-# ==========================================================
-
 def _search_pexels_image(query, save_path="temp_slide_image.jpg"):
-    """
-    Pexels'dan mavzuga mos rasm qidiradi va yuklab oladi.
-    Topilmasa yoki xatolik bo'lsa None qaytaradi.
-    """
-    if not PEXELS_API_KEY:
-        return None
+    if not PEXELS_API_KEY: return None
     try:
         headers = {"Authorization": PEXELS_API_KEY}
-        params = {"query": query, "per_page": 1, "orientation": "landscape"}
-        resp = requests.get(
-            "https://api.pexels.com/v1/search",
-            headers=headers, params=params, timeout=10
-        )
-        data = resp.json()
-        photos = data.get("photos", [])
-        if not photos:
-            return None
-        image_url = photos[0]["src"]["large"]
-        img_resp = requests.get(image_url, timeout=10)
-        with open(save_path, "wb") as f:
-            f.write(img_resp.content)
+        params = {"query": query, "per_page": 1}
+        resp = requests.get("https://api.pexels.com/v1/search", headers=headers, params=params, timeout=10)
+        photos = resp.json().get("photos", [])
+        if not photos: return None
+        img_resp = requests.get(photos[0]["src"]["large"], timeout=10)
+        with open(save_path, "wb") as f: f.write(img_resp.content)
         return save_path
-    except Exception:
-        return None
+    except: return None
 
-
-# ==========================================================
-#  POWERPOINT YARATISH — endi mavzuga mos rasmlar bilan
-# ==========================================================
 
 def create_pptx(title, content):
     prs = Presentation()
     slide_layout = prs.slide_layouts[1]
-
-    paragraphs = content.split('\n\n')
-    slide_count = 0
-
-    for p in paragraphs[:10]:  # Maksimal 10 ta slayd
-        if len(p.strip()) <= 10:
-            continue
-
+    paragraphs = [p for p in content.split('\n\n') if len(p.strip()) > 20]
+    
+    for p in paragraphs[:12]:
         slide = prs.slides.add_slide(slide_layout)
         slide.shapes.title.text = title
-
-        # Matn joylashuvini kichraytirib, o'ng tomonga rasm uchun joy qoldiramiz
-        text_placeholder = slide.placeholders[1]
-        text_placeholder.text = p
-        text_placeholder.left = Inches(0.5)
-        text_placeholder.top = Inches(1.5)
-        text_placeholder.width = Inches(5.5)
-        text_placeholder.height = Inches(5)
-
-        # Mavzuga mos rasm qidirib, slaydning o'ng tomoniga qo'shamiz
+        tf = slide.placeholders[1]
+        tf.text = p[:500] + "..." if len(p) > 500 else p
+        
         image_path = _search_pexels_image(title)
-        if image_path and os.path.exists(image_path):
+        if image_path:
             try:
-                slide.shapes.add_picture(
-                    image_path,
-                    Inches(6.3), Inches(1.8),
-                    width=Inches(3.2)
-                )
-            except Exception:
-                pass
-            finally:
-                if os.path.exists(image_path):
-                    os.remove(image_path)
-
-        slide_count += 1
+                slide.shapes.add_picture(image_path, Inches(6), Inches(1.5), width=Inches(3.5))
+            except: pass
+            finally: 
+                if os.path.exists(image_path): os.remove(image_path)
 
     file_path = "Taqdimot.pptx"
     prs.save(file_path)
