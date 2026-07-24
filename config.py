@@ -3,7 +3,7 @@ TELEGRAM_TOKEN = ""
 
 # AI Modeli
 AI_MODEL = "gpt-3.5-turbo"
-ADMIN_ID =          # Sizning Telegram ID raqamingiz (raqam bo'lishi kerak)
+ADMIN_ID =  1819574194        # Sizning Telegram ID raqamingiz (raqam bo'lishi kerak)
 CARD_NUMBER = ""   # Sizning Uzcard/Humo karta raqamingiz
 CARD_HOLDER = "ZAFARJON XATAMOV"          # Karta egasining ismi
 OPENAI_API_KEY = ""
