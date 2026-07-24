@@ -11,8 +11,8 @@ from config import (
     GEMINI_API_KEY,
 )
 
-# Pexels kaliti to'g'ridan-to'g'ri shu yerda (config.py'ga qo'shish shart emas)
-PEXELS_API_KEY = 
+# Pexels kaliti to'g'ridan-to'g'ri shu yerda
+PEXELS_API_KEY = "EwSRENDIIVaujdEYjtp5WNAr26n67yI5GIJF7oK8gUR1b1yln3z3uSw3"
 
 # ==========================================================
 #  QO'LLAB-QUVVATLANADIGAN TILLAR
