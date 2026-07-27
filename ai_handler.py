@@ -4,7 +4,6 @@ from openai import OpenAI
 from pptx import Presentation
 from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
-from pptx.enum.text import PP_ALIGN
 from config import OPENAI_API_KEY, AI_MODEL
 
 client = OpenAI(api_key=OPENAI_API_KEY)
@@ -28,26 +27,56 @@ def get_ai_slides(prompt: str, count: int = 8) -> str:
     return response.choices[0].message.content
 
 def create_pptx(title: str, slides_text: str, color_theme: str = "klassik") -> str:
-    """PowerPoint faylini mukammal dizayn va ranglar bilan yaratish"""
-    prs = Presentation()
+    """Loyihdagi barcha shablonlarni ko'rib chiqib, eng mosini tanlab PowerPoint yaratish"""
     
-    # 1. Asosiy Sarlavha Slaydi
-    slide_layout = prs.slide_layouts[0]
-    slide = prs.slides.add_slide(slide_layout)
-    if slide.shapes.title:
-        slide.shapes.title.text = clean_text(title)
-    if len(slide.placeholders) > 1:
-        slide.placeholders[1].text = "Avtomatik tayyorlangan ilmiy taqdimot"
+    # Papkadagi barcha .pptx fayllarni topish (hozirgi fayllar va o'zingiz yuklaydigan yangi shablonlar)
+    template_files = [f for f in os.listdir('.') if f.endswith('.pptx') and not f.startswith('presentation_')]
+    
+    selected_template = None
+    
+    if template_files:
+        # OpenAI orqali mavzuga eng mos keladigan shablon nomini tanlatamiz
+        try:
+            prompt_text = f"Quyidagi shablon fayllar ro'yxati bor: {template_files}.\nFoydalanuvchi kiritgan mavzu: '{title}'.\nShu mavzuga eng ko'p mos keladigan bitta fayl nomini faqat o'zini yoz (boshqa so'z yozma). Agar mos keladigani aniq bo'lmasa, ro'yxatdagi birinchisini yoz."
+            response = client.chat.completions.create(
+                model=AI_MODEL,
+                messages=[{"role": "user", "content": prompt_text}],
+                temperature=0.2
+            )
+            suggested = response.choices[0].message.content.strip()
+            if suggested in template_files:
+                selected_template = suggested
+            else:
+                selected_template = template_files[0]
+        except:
+            selected_template = template_files[0]
 
-    # Matnni qismlarga to'g'ri ajratish uchun regex yoki split ishlatamiz
-    # "Sarlavha:" so'zi bo'yicha bo'lamiz
+    # Agar tanlangan shablon mavjud bo'lsa, o'shandan nusxa olib ishlatamiz
+    if selected_template and os.path.exists(selected_template):
+        prs = Presentation(selected_template)
+    else:
+        prs = Presentation()
+
+    # 1. Sarlavha slaydi
+    if len(prs.slides) > 0:
+        slide = prs.slides[0]
+        for shape in slide.shapes:
+            if shape.has_text_frame:
+                shape.text_frame.text = clean_text(title)
+                break
+    else:
+        slide_layout = prs.slide_layouts[0]
+        slide = prs.slides.add_slide(slide_layout)
+        if slide.shapes.title:
+            slide.shapes.title.text = clean_text(title)
+
+    # Matnni qismlarga bo'lish
     chunks = slides_text.split("Sarlavha:")
     
     for chunk in chunks:
         if not chunk.strip():
             continue
             
-        # Har bir chunk ichidan Sarlavha va Matnni ajratib olamiz
         parts = chunk.split("Matn:")
         s_title = clean_text(parts[0])
         s_content = clean_text(parts[1]) if len(parts) > 1 else ""
@@ -55,15 +84,12 @@ def create_pptx(title: str, slides_text: str, color_theme: str = "klassik") -> s
         if not s_title or not s_content:
             continue
 
-        # Sarlavha va matn slaydi
-        slide_layout = prs.slide_layouts[1]
+        slide_layout = prs.slide_layouts[1] if len(prs.slide_layouts) > 1 else prs.slide_layouts[0]
         slide = prs.slides.add_slide(slide_layout)
         
-        # Sarlavha matnini yozish
         if slide.shapes.title:
             slide.shapes.title.text = s_title
             
-        # Asosiy matnni joylash va shriftni o'qishga qulay qilish
         if len(slide.placeholders) > 1:
             body_shape = slide.placeholders[1]
             tf = body_shape.text_frame
