@@ -2,7 +2,9 @@ import os
 import requests
 from docx import Document
 from pptx import Presentation
-from pptx.util import Inches
+from pptx.util import Inches, Pt
+from pptx.dml.color import RGBColor
+from pptx.enum.text import PP_ALIGN
 
 from config import AI_MODEL, OPENAI_API_KEY
 
@@ -24,73 +26,21 @@ def _try_openai(system_prompt, prompt):
     response = client.chat.completions.create(model=AI_MODEL, messages=messages)
     return response.choices[0].message.content
 
-STRUCTURE_GUIDES = {
-    "Dars ishlanmasi - Amaliy mashg'ulot": """AMALIY MASHGʻULOT ISHLANMASI
-Mavzuni to'liq ilmiy, akademik va pedagogik uslubda yoriting. Hech qanday uydirma faktlar, mantiqsiz so'zlar yoki boshqa tillarni aralashtirmang.
-Quyidagi tuzilmaga qat'iy amal qiling:
-1. MAVZU: [Mavzu nomi]
-2. Mashgʻulotning maqsadi: (Talabalar nima o'rganishi haqida batafsil va mantiqiy asoslangan maqsad).
-3. Mashg'ulot vazifalari: (3-4 ta aniq ta'limiy vazifalar).
-4. Asosiy tushunchalar: (Mavzuga oid kamida 3 ta terminning ilmiy izohi).
-5. Mashgʻulotning borishi (Bosqichlar): 
-   - Kirish qismi (tashkiliy qism va mavzuga kirish).
-   - Asosiy qism (Amaliy topshiriqlar, mashqlar va ularning ilmiy tahlili).
-   - Yakuniy qism (Xulosa va baholash).
-6. Mustaqil bajarish uchun topshiriqlar.
-7. Nazorat savollari (Mavzu yuzasidan 5 ta mantiqiy savol).
-8. Tavsiya etilgan asosiy adabiyotlar (Haqiqiy olimlar va kitoblar nomlari).
-""",
-
-    "Dars ishlanmasi - Seminar": """SEMINAR MASHG’ULOTI ISHLANMASI
-Mavzuni to'liq ilmiy, akademik va pedagogik uslubda yoriting. Barcha ma'lumotlar 100% to'g'ri, mantiqiy bog'langan va xatosiz bo'lishi shart.
-Quyidagi tuzilmaga qat'iy amal qiling:
-1. MAVZU: [Mavzu nomi]
-2. Mashg‘ulotning maqsadi va vazifalari: (Batafsil va ilmiy asoslangan).
-3. O'quv rejalari: (Mavzuni ochib beruvchi 3-4 ta asosiy reja).
-4. Asosiy qism (Rejalarning batafsil bayoni): Har bir reja bo'yicha ilmiy dalillar, faktlar va qoidalar bilan asoslangan kengaytirilgan matn.
-5. Seminar uchun munozara savollari: (Guruh bo'lib ishlash uchun 5 ta o'ylantiradigan savol).
-6. Tahliliy topshiriqlar (Keys-stadi): Talabalar yechishi kerak bo'lgan bitta kichik amaliy muammo.
-7. Foydalanilgan adabiyotlar.
-""",
-
-    "Dars ishlanmasi - Laboratoriya mashg'uloti": """LABORATORIYA MASHG’ULOTI ISHLANMASI
-Mavzuni ilmiy, aniq va texnik/metodik jihatdan to'g'ri yoriting. Tajriba yoki mashg'ulot jarayoni ketma-ketligini aniq tushuntiring.
-1. MAVZU: [Mavzu nomi]
-2. Laboratoriya mashg'ulotining maqsadi.
-3. Kerakli jihozlar va uskunalar.
-4. Xavfsizlik texnikasi qoidalari.
-5. Mashg'ulotni bajarish tartibi (Qadam-baqadam aniq ko'rsatmalar, mantiqiy ketma-ketlikda).
-6. Olingan natijalarni tahlil qilish usullari.
-7. Xulosa va topshiriqlar.
-""",
-
-    "Mavzu bo'yicha slayd": """Siz professional prezentatsiya (Slayd) yaratuvchisiz.
-Matnlar juda qisqa, aniq, ilmiy asoslangan va dizaynga mos bo'lishi kerak.
-Mavzuga umuman aloqasi yo'q so'zlarni ISHLATMANG! Faqat haqiqiy sport va akademik faktlarni yozing.
-Kamida 8 ta, ko'pi bilan 12 ta slayd tayyorlang.
-
-Har bir slaydni quyidagi formatda qat'iy yozing:
-[Slayd 1]
-Sarlavha: (Mavzuga oid aniq sarlavha)
-Matn: (2-3 ta qisqa, tushunarli bullet point yoki faktlar).
-Rasm: (Faqatgina ingliz tilida BITTA SO'Z yozing. Masalan: handball, goalkeeper, sport, stadium, training, team)
-"""
-}
-
-def get_structure_guide(context):
-    return STRUCTURE_GUIDES.get(context, "Mavzuni to'liq ilmiy, akademik va grammatik jihatdan xatosiz yoriting. Uydirma faktlar ishlatmang.")
-
-def get_ai_response(prompt, context="", language="uz"):
-    structure = get_structure_guide(context)
+# 1. REJALARNI TUZISH FUNKSIYASI
+def generate_plans(topic, language="uz"):
     lang_name = get_language_name(language)
-    
+    system_prompt = f"Siz tajribali professor va akademik sifatida {lang_name} tilida ilmiy mavzular uchun 4 ta mukammal reja tuzib berasiz."
+    prompt = f"'{topic}' mavzusi uchun 4 ta asosiy reja tuzib bering. Har bir reja ilmiy va mantiqiy ketma-ketlikda bo'lsin. Faqat rejalarni matn ko'rinishida yozing."
+    return _try_openai(system_prompt, prompt)
+
+# 2. SLAYD UCHUN MATN VA MAZMUN YARATISH
+def get_ai_response(prompt, context="", language="uz"):
+    lang_name = get_language_name(language)
     system_prompt = (
-        f"Siz O'zbekistonning eng tajribali professori va fan nomzodisiz. "
-        f"Sizning vazifangiz universitet talabalari va o'qituvchilari uchun yuqori sifatli, ilmiy materiallar tayyorlash. "
-        f"Barcha javoblarni FAKAT VA FAKAT {lang_name} tilida yozing. Boshqa tillarni aralashtirmang. "
-        f"Faktlar 100% to'g'ri, mantiqli va ilmiy tilda bo'lishi shart. Hech qachon mavjud bo'lmagan so'zlarni, g'ayritabiiy qoidalarni yoki mantiqsiz ro'yxatlarni o'ylab topmang.\n\n"
-        f"Bo'lim: {context}.\n"
-        f"Qat'iy yozish qoidasi:\n{structure}"
+        f"Siz professional taqdimot va slayd yaratuvchisiz. Barcha javoblar FAKAT {lang_name} tilida bo'lsin. "
+        f"Kamida 8 ta, ko'pi bilan 12 ta slayd tayyorlang. "
+        f"Har bir slaydni quyidagi qat'iy formatda yozing:\n"
+        f"[Slayd 1]\nSarlavha: ...\nMatn: ...\nRasm: (ingliz tilida bitta so'z, masalan: sport, education, technology)"
     )
     return _try_openai(system_prompt, prompt)
 
@@ -106,8 +56,7 @@ def create_word(title, content):
 def _search_pexels_image(query, save_path="temp_slide_image.jpg"):
     if not PEXELS_API_KEY: return None
     search_query = query.replace("Rasm:", "").strip().lower()
-    if len(search_query) < 3 or "qoraqo'l" in search_query or "serang" in search_query:
-        search_query = "handball goalkeeper"
+    if len(search_query) < 3: search_query = "presentation design"
         
     try:
         resp = requests.get(
@@ -117,62 +66,82 @@ def _search_pexels_image(query, save_path="temp_slide_image.jpg"):
             timeout=10
         )
         photos = resp.json().get("photos", [])
-        if not photos: 
-            resp = requests.get("https://api.pexels.com/v1/search", headers={"Authorization": PEXELS_API_KEY}, params={"query": "sport training", "per_page": 1}, timeout=10)
-            photos = resp.json().get("photos", [])
-            if not photos: return None
-            
+        if not photos: return None
         img_resp = requests.get(photos[0]["src"]["large"], timeout=10)
         with open(save_path, "wb") as f: f.write(img_resp.content)
         return save_path
-    except: 
-        return None
+    except: return None
 
+# 3. ZAMONAVIY QUTILI VA DIZAYNLI POWERPOINT YARATISH
 def create_pptx(title, content):
     prs = Presentation()
-    slide_layout = prs.slide_layouts[1]
+    prs.slide_width = Inches(13.33)
+    prs.slide_height = Inches(7.5)
+    blank_layout = prs.slide_layouts[6] # Bo'sh slayd
     
     slides_data = content.split('[Slayd')
     
     for s_data in slides_data:
         if not s_data.strip(): continue
-        
         lines = [ln.strip() for ln in s_data.split('\n') if ln.strip()]
         if len(lines) < 2: continue
-        
         if lines[0].endswith(']'): lines = lines[1:] 
         if not lines: continue
             
         slide_title = "Sarlavha yo'q"
-        body_text_lines = []
-        image_keyword = "sport training" 
+        body_text = ""
+        image_keyword = "education" 
         
         for line in lines:
             if line.startswith("Sarlavha:"):
                 slide_title = line.replace("Sarlavha:", "").strip()
             elif line.startswith("Matn:"):
-                body_text_lines.append(line.replace("Matn:", "").strip())
+                body_text = line.replace("Matn:", "").strip()
             elif line.startswith("Rasm:"):
                 image_keyword = line.replace("Rasm:", "").strip()
-            elif line and not line.startswith("[") and not line.startswith("Sarlavha") and not line.startswith("Rasm"):
-                body_text_lines.append(line)
                 
-        body_text = '\n'.join(body_text_lines)
+        slide = prs.slides.add_slide(blank_layout)
         
-        slide = prs.slides.add_slide(slide_layout)
-        slide.shapes.title.text = slide_title
+        # Orqa fon rangi (Oq/Havoriy zamonaviy)
+        background = slide.background
+        fill = background.fill
+        fill.solid()
+        fill.fore_color.rgb = RGBColor(248, 250, 252)
         
-        text_placeholder = slide.placeholders[1]
-        text_placeholder.text = body_text
-        text_placeholder.left, text_placeholder.top = Inches(0.5), Inches(1.5)
-        text_placeholder.width, text_placeholder.height = Inches(5.5), Inches(5)
+        # Yuqori sarlavha qutisi
+        title_box = slide.shapes.add_textbox(Inches(0.8), Inches(0.6), Inches(11.7), Inches(1.0))
+        tf_title = title_box.text_frame
+        tf_title.word_wrap = True
+        p_title = tf_title.paragraphs[0]
+        p_title.text = slide_title
+        p_title.font.size = Pt(32)
+        p_title.font.bold = True
+        p_title.font.color.rgb = RGBColor(15, 23, 42)
         
+        # Matn uchun zamonaviy quti (Card Box)
+        card = slide.shapes.add_shape(1, Inches(0.8), Inches(1.8), Inches(7.2), Inches(5.0)) # 1 = Manger (Rectangle)
+        card.fill.solid()
+        card.fill.fore_color.rgb = RGBColor(255, 255, 255)
+        card.line.color.rgb = RGBColor(226, 232, 240)
+        card.line.width = Pt(1.5)
+        
+        # Matnni quti ichiga joylash
+        text_box = slide.shapes.add_textbox(Inches(1.1), Inches(2.1), Inches(6.6), Inches(4.4))
+        tf_body = text_box.text_frame
+        tf_body.word_wrap = True
+        p_body = tf_body.paragraphs[0]
+        p_body.text = body_text
+        p_body.font.size = Pt(20)
+        p_body.font.color.rgb = RGBColor(51, 65, 85)
+        
+        # Rasmni joylash
         image_path = _search_pexels_image(image_keyword)
         if image_path and os.path.exists(image_path):
-            try: slide.shapes.add_picture(image_path, Inches(6.3), Inches(1.8), width=Inches(3.2))
+            try:
+                slide.shapes.add_picture(image_path, Inches(8.3), Inches(1.8), width=Inches(4.2), height=Inches(5.0))
             except: pass
             finally: os.remove(image_path)
             
-    file_path = "Tayyor_Slayd.pptx"
+    file_path = "Zamonaviy_Slayd.pptx"
     prs.save(file_path)
     return file_path
