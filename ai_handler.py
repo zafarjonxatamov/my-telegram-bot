@@ -32,7 +32,6 @@ def _try_gemini(system_prompt, prompt):
     if "candidates" in data: return data["candidates"][0]["content"]["parts"][0]["text"]
     raise Exception(data.get("error", {}).get("message", str(data)))
 
-# Yaxshilangan, ilmiy va qat'iy andozalar (Prompts)
 STRUCTURE_GUIDES = {
     "Dars ishlanmasi - Amaliy mashg'ulot": """AMALIY MASHGʻULOT ISHLANMASI
 Mavzuni to'liq ilmiy, akademik va pedagogik uslubda yoriting. Hech qanday uydirma faktlar, mantiqsiz so'zlar yoki boshqa tillarni aralashtirmang.
@@ -73,7 +72,7 @@ Mavzuni ilmiy, aniq va texnik/metodik jihatdan to'g'ri yoriting. Tajriba yoki ma
 7. Xulosa va topshiriqlar.
 """,
 
- "Mavzu bo'yicha slayd": """Siz professional prezentatsiya (Slayd) yaratuvchisiz.
+    "Mavzu bo'yicha slayd": """Siz professional prezentatsiya (Slayd) yaratuvchisiz.
 Matnlar juda qisqa, aniq, ilmiy asoslangan va dizaynga mos bo'lishi kerak.
 Mavzuga umuman aloqasi yo'q so'zlarni (masalan "suv osti yengil atletikasi", "dalchilar" kabi o'ylab topilgan terminlarni) ISHLATMANG! Faqat haqiqiy faktlarni yozing.
 Kamida 8 ta, ko'pi bilan 12 ta slayd tayyorlang.
@@ -83,11 +82,6 @@ Har bir slaydni quyidagi formatda qat'iy yozing:
 Sarlavha: (Mavzuga oid aniq sarlavha)
 Matn: (2-3 ta qisqa, tushunarli bullet point yoki faktlar).
 Rasm: (Faqatgina shu slayd mavzusiga mos Pexels saytidan qidirish uchun BITTA INGLIZCHA SO'Z. Masalan: athletics, stadium, sprint, running, jumping)
-"""
-
-[Slayd 2]
-Sarlavha: (Keyingi qism sarlavhasi)
-Matn: (Aniq ma'lumotlar).
 """
 }
 
@@ -104,7 +98,6 @@ def get_ai_response(prompt, context="", language="uz"):
     structure = get_structure_guide(context)
     lang_name = get_language_name(language)
     
-    # AI ga qat'iy buyruq (System Prompt)
     system_prompt = (
         f"Siz O'zbekistonning eng tajribali professori va fan nomzodisiz. "
         f"Sizning vazifangiz universitet talabalari va o'qituvchilari uchun yuqori sifatli, ilmiy materiallar tayyorlash. "
@@ -127,10 +120,9 @@ def create_word(title, content):
 
 def _search_pexels_image(query, save_path="temp_slide_image.jpg"):
     if not PEXELS_API_KEY: return None
-    # Slayd uchun rasm qidirishni aniqroq qilish
     search_query = query.replace("Sarlavha:", "").strip()
     if len(search_query) < 4:
-        search_query = "education university" # Agar mantiqsiz kichik so'z bo'lsa, ta'lim rasmini oladi
+        search_query = "education university"
         
     try:
         resp = requests.get(
@@ -158,15 +150,13 @@ def create_pptx(title, content):
         lines = [ln.strip() for ln in s_data.split('\n') if ln.strip()]
         if len(lines) < 2: continue
         
-        # '1]', '2]' kabi raqamlarni olib tashlash
         if lines[0].endswith(']'): lines = lines[1:] 
         if not lines: continue
             
         slide_title = "Sarlavha yo'q"
         body_text_lines = []
-        image_keyword = "education" # agar rasm kalit so'zi topilmasa, standart rasm
+        image_keyword = "education" 
         
-        # Har bir qatorni analiz qilish
         for line in lines:
             if line.startswith("Sarlavha:"):
                 slide_title = line.replace("Sarlavha:", "").strip()
@@ -187,7 +177,6 @@ def create_pptx(title, content):
         text_placeholder.left, text_placeholder.top = Inches(0.5), Inches(1.5)
         text_placeholder.width, text_placeholder.height = Inches(5.5), Inches(5)
         
-        # Pexels faqat inglizcha kalit so'z bilan qidiradi
         image_path = _search_pexels_image(image_keyword)
         if image_path and os.path.exists(image_path):
             try: slide.shapes.add_picture(image_path, Inches(6.3), Inches(1.8), width=Inches(3.2))
