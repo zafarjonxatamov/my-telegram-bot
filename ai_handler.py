@@ -73,15 +73,17 @@ Mavzuni ilmiy, aniq va texnik/metodik jihatdan to'g'ri yoriting. Tajriba yoki ma
 7. Xulosa va topshiriqlar.
 """,
 
-    "Mavzu bo'yicha slayd": """Siz professional prezentatsiya (Slayd) yaratuvchisiz.
-Matnlar juda qisqa, aniq, ilmiy asoslangan va dizaynga mos bo'lishi kerak. 
-Uydirma so'zlar, mantiqsiz iboralar ishlatish QAT'IYAN TAQIQLANADI. 
+ "Mavzu bo'yicha slayd": """Siz professional prezentatsiya (Slayd) yaratuvchisiz.
+Matnlar juda qisqa, aniq, ilmiy asoslangan va dizaynga mos bo'lishi kerak.
+Mavzuga umuman aloqasi yo'q so'zlarni (masalan "suv osti yengil atletikasi", "dalchilar" kabi o'ylab topilgan terminlarni) ISHLATMANG! Faqat haqiqiy faktlarni yozing.
 Kamida 8 ta, ko'pi bilan 12 ta slayd tayyorlang.
 
-Har bir slaydni quyidagi formatda yozing:
+Har bir slaydni quyidagi formatda qat'iy yozing:
 [Slayd 1]
 Sarlavha: (Mavzuga oid aniq sarlavha)
 Matn: (2-3 ta qisqa, tushunarli bullet point yoki faktlar).
+Rasm: (Faqatgina shu slayd mavzusiga mos Pexels saytidan qidirish uchun BITTA INGLIZCHA SO'Z. Masalan: athletics, stadium, sprint, running, jumping)
+"""
 
 [Slayd 2]
 Sarlavha: (Keyingi qism sarlavhasi)
