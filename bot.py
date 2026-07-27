@@ -10,13 +10,11 @@ from database import (
 
 logging.basicConfig(level=logging.INFO)
 
-# BMI, Magistrlik va Uslubiy qo'llanma olib tashlandi
 PRICES = {
     "Dars ishlanmasi": 4000, "Maqola": 19999, "Tezis": 9999,
     "Mavzu bo'yicha slayd": 4999, "Mustaqil ish": 9999, "Kurs ishi": 29999
 }
 
-# Ma'ruza olib tashlandi
 DARS_TURI_PRICES = {
     "Amaliy mashg'ulot": 5000,
     "Seminar": 6000,
@@ -29,22 +27,38 @@ DARS_TURI_MAP = {
     "💬 Seminar": "Seminar", 
     "🔬 Laboratoriya mashg'uloti": "Laboratoriya mashg'uloti"
 }
-# Tugmalar qatori moslandi
 DARS_TURI_KEYBOARD_ROWS = [["🛠 Amaliy mashg'ulot", "💬 Seminar"], ["🔬 Laboratoriya mashg'uloti"]]
 
 def build_categories_keyboard():
-    # Menyu soddalashtirildi
     return ReplyKeyboardMarkup([
         ["Dars ishlanmasi", "Maqola"], 
         ["Tezis", "Mustaqil ish"],
         ["Kurs ishi", "Mavzu bo'yicha slayd"]
     ], resize_keyboard=True)
 
+# Til tanlash tugmalari
+def build_language_keyboard():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("🇺🇿 O'zbek", callback_data="lang_uz"), InlineKeyboardButton("🇷🇺 Русский", callback_data="lang_ru")],
+        [InlineKeyboardButton("🇬🇧 English", callback_data="lang_en"), InlineKeyboardButton("🇰🇿 Қазақша", callback_data="lang_kk")],
+        [InlineKeyboardButton("🇰🇬 Кыргызча", callback_data="lang_kg"), InlineKeyboardButton("🇹🇯 Тоҷикӣ", callback_data="lang_tg")],
+        [InlineKeyboardButton("🇺🇿 Qaraqalpaqsha", callback_data="lang_kaa")]
+    ])
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     init_db()
     await update.message.reply_text(
-        "Assalomu alaykum men sizning AI yordamchingizman, bo'limlarni tanlang",
+        "Assalomu alaykum men sizning AI yordamchingizman.\n\n"
+        "🌐 Tilni o'zgartirish uchun /til buyrug'ini bosing.\n"
+        "Quyidagi bo'limlardan birini tanlang:",
         reply_markup=build_categories_keyboard()
+    )
+
+# /til buyrug'i uchun funksiya
+async def set_lang_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "Iltimos, o'zingizga qulay tilni tanlang:\nВыберите язык:\nChoose your language:", 
+        reply_markup=build_language_keyboard()
     )
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -98,7 +112,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ai_context = f"{cat} - {dars_turi}" if dars_turi else cat
         
         try:
-            # Server qotib qolmasligi uchun asinxron (background) rejimda ishga tushirish
             resp = await asyncio.to_thread(get_ai_response, topic, ai_context, user_lang)
 
             if "slayd" in cat.lower():
@@ -112,7 +125,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             context.user_data['cat'] = None
             context.user_data['dars_turi'] = None
         except Exception as e:
-            update_balance(uid, price) # Pulni qaytarish
+            update_balance(uid, price) 
             await update.message.reply_text(f"Fayl saqlashda xatolik yuz berdi: {e}", reply_markup=build_categories_keyboard())
     else:
         await update.message.reply_text(
@@ -163,15 +176,25 @@ async def handle_screenshot(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=keyboard
     )
 
-async def handle_admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# Tilni o'zgartirish va admin tasdiqlarini bitta joyda boshqarish
+async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+    data = query.data
 
+    # Agar til tanlangan bo'lsa
+    if data.startswith("lang_"):
+        lang_code = data.split("_")[1]
+        set_language(query.from_user.id, lang_code)
+        await query.edit_message_text("✅ Til muvaffaqiyatli tanlandi! Endi barcha ma'lumotlar shu tilda tayyorlanadi.")
+        return
+
+    # Agar admin to'lovni tasdiqlayotgan bo'lsa
     if query.from_user.id != ADMIN_ID:
         await query.answer("⛔ Sizda ruxsat yo'q!", show_alert=True)
         return
 
-    action, payment_id_str = query.data.split("_")
+    action, payment_id_str = data.split("_")
     payment_id = int(payment_id_str)
 
     payment = get_payment(payment_id)
@@ -205,9 +228,10 @@ if __name__ == '__main__':
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
     
     app.add_handler(CommandHandler('start', start))
+    app.add_handler(CommandHandler('til', set_lang_command)) # Til buyrug'i qo'shildi
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
     app.add_handler(MessageHandler(filters.PHOTO, handle_screenshot))
-    app.add_handler(CallbackQueryHandler(handle_admin_callback))
+    app.add_handler(CallbackQueryHandler(handle_callback)) # Callback yangilandi
     
-    print("Og'ir bo'limlarsiz YENGIL bot ishga tushdi...")
+    print("Bot 7 ta til funksiyasi bilan ishga tushdi...")
     app.run_polling()
