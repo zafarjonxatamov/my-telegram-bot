@@ -10,7 +10,7 @@ genai.configure(api_key=GEMINI_API_KEY)
 
 def get_ai_slides(prompt: str, count: int = 8) -> str:
     """Gemini AI orqali taqdimot matnini generatsiya qilish"""
-    model = genai.GenerativeModel("gemini-1.5-pro")
+    model = genai.GenerativeModel("gemini-pro")
     full_prompt = (
         f"Mavzu bo'yicha {count} ta slayddan iborat taqdimot matnini tuzib ber.\n"
         f"Har bir slayd sarlavhasi 'Sarlavha:' bilan, matni esa 'Matn:' bilan boshlansin.\n"
