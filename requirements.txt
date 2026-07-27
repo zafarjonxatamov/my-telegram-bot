@@ -4,3 +4,4 @@ python-dotenv
 requests
 python-pptx
 pypdf
+python-telegram-bot
