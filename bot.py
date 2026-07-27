@@ -35,23 +35,27 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data.clear()
     await update.message.reply_text(WELCOME_TEXT, reply_markup=build_categories_keyboard())
 
-# RASM (CHEK) KELGANDA ISHLaydigan FUNKSIYA
 async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = update.message.from_user.id
     username = update.message.from_user.username or "Noma'lum"
+    file_id = update.message.photo[-1].file_id
     
-    # Ma'lumotlar bazasida to'lov yozuvi yaratish
-    payment_id = create_payment(uid, 5000) # Standart yoki oxirgi narx
+    cat = context.user_data.get('cat', "Mavzu bo'yicha slayd")
+    dars_turi = context.user_data.get('dars_turi')
+    price = DARS_TURI_PRICES[dars_turi] if cat == "Dars ishlanmasi" and dars_turi in DARS_TURI_PRICES else PRICES.get(cat, 5000)
+
+    payment_id = create_payment(uid, price, file_id)
     
     caption = (
         f"💳 **Yangi to'lov cheki keldi!**\n\n"
         f"👤 Foydalanuvchi: @{username} (ID: `{uid}`)\n"
+        f"💵 Summa: {price} so'm\n"
         f"🆔 To'lov ID: `{payment_id}`"
     )
     
     keyboard = InlineKeyboardMarkup([
         [
-            InlineKeyboardButton("✅ Tasdiqlash", callback_data=f"pay_yes_{payment_id}_{uid}"),
+            InlineKeyboardButton("✅ Tasdiqlash", callback_data=f"pay_yes_{payment_id}_{uid}_{price}"),
             InlineKeyboardButton("❌ Rad etish", callback_data=f"pay_no_{payment_id}_{uid}")
         ]
     ])
@@ -60,7 +64,7 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             await context.bot.send_photo(
                 chat_id=int(ADMIN_ID),
-                photo=update.message.photo[-1].file_id,
+                photo=file_id,
                 caption=caption,
                 reply_markup=keyboard,
                 parse_mode="Markdown"
@@ -152,7 +156,6 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text("✅ Til o'zgartirildi!")
         return
 
-    # ADMIN TO'LOVNI TASDIqlashi YOKI RAD ETISHI
     if data.startswith("pay_yes_") or data.startswith("pay_no_"):
         parts = data.split("_")
         action = parts[1]
@@ -160,8 +163,9 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         target_uid = int(parts[3])
         
         if action == "yes":
+            amount = int(parts[4]) if len(parts) > 4 else 5000
             set_payment_status(pay_id, "approved")
-            update_balance(target_uid, 10000) # Qo'shiladigan summa
+            update_balance(target_uid, amount)
             await query.edit_message_caption(caption=query.message.caption + "\n\n✅ **Tasdiqlandi! Balans qo'shildi.**", parse_mode="Markdown")
             try:
                 await context.bot.send_message(chat_id=target_uid, text="✅ To'lovingiz tasdiqlandi! Balansingizga mablag' qo'shildi. Endi mavzuni yuborishingiz mumkin.", reply_markup=build_categories_keyboard())
@@ -222,8 +226,8 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 if __name__ == '__main__':
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
     app.add_handler(CommandHandler('start', start))
-    app.add_handler(MessageHandler(filters.PHOTO, handle_photo)) # Chek rasmini tutib olish uchun
+    app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
     app.add_handler(CallbackQueryHandler(handle_callback))
-    print("Bot chek qabul qilish va tasdiqlash funksiyasi bilan ishga tushdi...")
+    print("Bot mukammal holatda ishga tushdi...")
     app.run_polling()
