@@ -30,13 +30,14 @@ DARS_TURI_MAP = {
 DARS_TURI_KEYBOARD_ROWS = [["🛠 Amaliy mashg'ulot", "💬 Seminar"], ["🔬 Laboratoriya mashg'uloti"]]
 
 def build_categories_keyboard():
+    # Asosiy menyuga "Tilni o'zgartirish" tugmasi qo'shildi
     return ReplyKeyboardMarkup([
         ["Dars ishlanmasi", "Maqola"], 
         ["Tezis", "Mustaqil ish"],
-        ["Kurs ishi", "Mavzu bo'yicha slayd"]
+        ["Kurs ishi", "Mavzu bo'yicha slayd"],
+        ["🌐 Tilni o'zgartirish"] 
     ], resize_keyboard=True)
 
-# Til tanlash tugmalari
 def build_language_keyboard():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("🇺🇿 O'zbek", callback_data="lang_uz"), InlineKeyboardButton("🇷🇺 Русский", callback_data="lang_ru")],
@@ -48,23 +49,22 @@ def build_language_keyboard():
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     init_db()
     await update.message.reply_text(
-        "Assalomu alaykum men sizning AI yordamchingizman.\n\n"
-        "🌐 Tilni o'zgartirish uchun /til buyrug'ini bosing.\n"
-        "Quyidagi bo'limlardan birini tanlang:",
+        "Assalomu alaykum men sizning AI yordamchingizman. Bo'limni tanlang:",
         reply_markup=build_categories_keyboard()
-    )
-
-# /til buyrug'i uchun funksiya
-async def set_lang_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "Iltimos, o'zingizga qulay tilni tanlang:\nВыберите язык:\nChoose your language:", 
-        reply_markup=build_language_keyboard()
     )
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = update.message.from_user.id
     text = update.message.text
     user_lang = get_language(uid)
+
+    # Agar foydalanuvchi menyudan Til tugmasini bosa:
+    if text == "🌐 Tilni o'zgartirish":
+        await update.message.reply_text(
+            "Iltimos, o'zingizga qulay tilni tanlang:\nВыберите язык:\nChoose your language:", 
+            reply_markup=build_language_keyboard()
+        )
+        return
 
     if text in SUBTYPE_CATEGORIES:
         context.user_data['pending_cat'] = text
@@ -176,20 +176,17 @@ async def handle_screenshot(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=keyboard
     )
 
-# Tilni o'zgartirish va admin tasdiqlarini bitta joyda boshqarish
 async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     data = query.data
 
-    # Agar til tanlangan bo'lsa
     if data.startswith("lang_"):
         lang_code = data.split("_")[1]
         set_language(query.from_user.id, lang_code)
         await query.edit_message_text("✅ Til muvaffaqiyatli tanlandi! Endi barcha ma'lumotlar shu tilda tayyorlanadi.")
         return
 
-    # Agar admin to'lovni tasdiqlayotgan bo'lsa
     if query.from_user.id != ADMIN_ID:
         await query.answer("⛔ Sizda ruxsat yo'q!", show_alert=True)
         return
@@ -228,10 +225,9 @@ if __name__ == '__main__':
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
     
     app.add_handler(CommandHandler('start', start))
-    app.add_handler(CommandHandler('til', set_lang_command)) # Til buyrug'i qo'shildi
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
     app.add_handler(MessageHandler(filters.PHOTO, handle_screenshot))
-    app.add_handler(CallbackQueryHandler(handle_callback)) # Callback yangilandi
+    app.add_handler(CallbackQueryHandler(handle_callback))
     
-    print("Bot 7 ta til funksiyasi bilan ishga tushdi...")
+    print("Bot 7 ta til tugmasi bilan ishga tushdi...")
     app.run_polling()
