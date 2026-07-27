@@ -81,8 +81,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_lang = get_language(uid)
 
     if text == "🌐 Tilni o'zgartirish":
-        await update.message.reply_text("Iltimos, tilni tanlang:", reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("🇺🇿 O'zbek", callback_data="lang_uz"), InlineKeyboardButton("🇷🇺 Русский", callback_data="lang_ru")]
+        await update.message.reply_text("Iltimos, tilni tanlang / Please select language:", reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("🇺🇿 O'zbek", callback_data="lang_uz"), InlineKeyboardButton("🇷🇺 Русский", callback_data="lang_ru")],
+            [InlineKeyboardButton("🇬🇧 English", callback_data="lang_en"), InlineKeyboardButton(" Karakalpak", callback_data="lang_kaa")],
+            [InlineKeyboardButton("🇰🇬 Кыргызча", callback_data="lang_kg"), InlineKeyboardButton("🇰🇿 Қазақша", callback_data="lang_kk")],
+            [InlineKeyboardButton("🇹🇯 Тоҷикӣ", callback_data="lang_tg")]
         ]))
         return
 
@@ -153,7 +156,8 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if data.startswith("lang_"):
         set_language(uid, data.split("_")[1])
-        await query.edit_message_text("✅ Til o'zgartirildi!")
+        await query.edit_message_text("✅ Til muvaffaqiyatli o'zgartirildi!", reply_markup=None)
+        await context.bot.send_message(chat_id=uid, text="Asosiy menyu:", reply_markup=build_categories_keyboard())
         return
 
     if data.startswith("pay_yes_") or data.startswith("pay_no_"):
@@ -229,5 +233,5 @@ if __name__ == '__main__':
     app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
     app.add_handler(CallbackQueryHandler(handle_callback))
-    print("Bot mukammal holatda ishga tushdi...")
+    print("Bot barcha tillar va funksiyalar bilan mukammal ishga tushdi...")
     app.run_polling()
