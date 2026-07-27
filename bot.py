@@ -1,4 +1,4 @@
-import logging, os
+import logging, os, asyncio
 from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 from config import TELEGRAM_TOKEN, ADMIN_ID, CARD_NUMBER, CARD_HOLDER
@@ -10,17 +10,14 @@ from database import (
 
 logging.basicConfig(level=logging.INFO)
 
-# Umumiy narxlar ro'yxati
+# BMI, Magistrlik va Uslubiy qo'llanma olib tashlandi
 PRICES = {
-    "Dars ishlanmasi": 5000-7000, "Maqola": 19999, "Tezis": 9999,
-    "Mavzu bo'yicha slayd": 4999, "Mustaqil ish": 9999, "Kurs ishi": 29999,
-    "Bitiruv malakaviy ishi": 199999, "Magistrlik dissertatsiyasi": 799999,
-    "Uslubiy qo'llanma": 599999
+    "Dars ishlanmasi": 4000, "Maqola": 19999, "Tezis": 9999,
+    "Mavzu bo'yicha slayd": 4999, "Mustaqil ish": 9999, "Kurs ishi": 29999
 }
 
-# Dars ishlanmasi turlari uchun yangilangan maxsus narxlar
+# Ma'ruza olib tashlandi
 DARS_TURI_PRICES = {
-    "Ma'ruza": 7000,
     "Amaliy mashg'ulot": 5000,
     "Seminar": 6000,
     "Laboratoriya mashg'uloti": 6000
@@ -28,16 +25,19 @@ DARS_TURI_PRICES = {
 
 SUBTYPE_CATEGORIES = ["Dars ishlanmasi"]
 DARS_TURI_MAP = {
-    "📖 Ma'ruza": "Ma'ruza", "🛠 Amaliy mashg'ulot": "Amaliy mashg'ulot",
-    "💬 Seminar": "Seminar", "🔬 Laboratoriya mashg'uloti": "Laboratoriya mashg'uloti"
+    "🛠 Amaliy mashg'ulot": "Amaliy mashg'ulot",
+    "💬 Seminar": "Seminar", 
+    "🔬 Laboratoriya mashg'uloti": "Laboratoriya mashg'uloti"
 }
-DARS_TURI_KEYBOARD_ROWS = [["📖 Ma'ruza", "🛠 Amaliy mashg'ulot"], ["💬 Seminar", "🔬 Laboratoriya mashg'uloti"]]
+# Tugmalar qatori moslandi
+DARS_TURI_KEYBOARD_ROWS = [["🛠 Amaliy mashg'ulot", "💬 Seminar"], ["🔬 Laboratoriya mashg'uloti"]]
 
 def build_categories_keyboard():
+    # Menyu soddalashtirildi
     return ReplyKeyboardMarkup([
-        ["Dars ishlanmasi", "Maqola"], ["Tezis", "Uslubiy qo'llanma"],
-        ["Mustaqil ish", "Mavzu bo'yicha slayd"], ["Kurs ishi", "Bitiruv malakaviy ishi"],
-        ["Magistrlik dissertatsiyasi"]
+        ["Dars ishlanmasi", "Maqola"], 
+        ["Tezis", "Mustaqil ish"],
+        ["Kurs ishi", "Mavzu bo'yicha slayd"]
     ], resize_keyboard=True)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -52,14 +52,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     user_lang = get_language(uid)
 
-    # 1. Dars ishlanmasini tanlaganda
     if text in SUBTYPE_CATEGORIES:
         context.user_data['pending_cat'] = text
         context.user_data['awaiting_dars_turi'] = True
         await update.message.reply_text("📚 Dars turini tanlang:", reply_markup=ReplyKeyboardMarkup(DARS_TURI_KEYBOARD_ROWS, resize_keyboard=True))
         return
 
-    # 2. Dars turini (Ma'ruza, Seminar...) tanlaganda
     if context.user_data.get('awaiting_dars_turi') and text in DARS_TURI_MAP:
         context.user_data['awaiting_dars_turi'] = False
         context.user_data['cat'] = context.user_data.get('pending_cat', "Dars ishlanmasi")
@@ -67,20 +65,17 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Mavzuni kiriting", reply_markup=ReplyKeyboardRemove())
         return
 
-    # 3. Boshqa oddiy bo'limlarni (Maqola, Tezis...) tanlaganda
     if text in PRICES and text not in SUBTYPE_CATEGORIES:
         context.user_data['cat'] = text
         context.user_data['dars_turi'] = None
         await update.message.reply_text("Mavzuni kiriting", reply_markup=ReplyKeyboardRemove())
         return
 
-    # 4. Foydalanuvchi mavzuni yozganda (yo'naltirilgan bo'lsa)
     cat = context.user_data.get('cat')
     if cat:
         topic = text
         dars_turi = context.user_data.get('dars_turi')
         
-        # Yangi narxlarni qo'llash
         if cat == "Dars ishlanmasi" and dars_turi in DARS_TURI_PRICES:
             price = DARS_TURI_PRICES[dars_turi]
         else:
@@ -88,7 +83,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
         bal = get_balance(uid)
 
-        # Balans yetarli bo'lmaganda chiqadigan aniq xabar
         if bal < price:
             await update.message.reply_text(
                 f"⚠️ Kerakli mablag'ni kiriting va to'lov rasmini yuboring.\n\n"
@@ -98,18 +92,19 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
         
-        # Pul yechish va ishlashni boshlash
         await update.message.reply_text("⏳ Fayl tayyorlanmoqda, iltimos kuting...")
         update_balance(uid, -price)
         
         ai_context = f"{cat} - {dars_turi}" if dars_turi else cat
-        resp = get_ai_response(topic, context=ai_context, language=user_lang)
-
+        
         try:
+            # Server qotib qolmasligi uchun asinxron (background) rejimda ishga tushirish
+            resp = await asyncio.to_thread(get_ai_response, topic, ai_context, user_lang)
+
             if "slayd" in cat.lower():
-                p = create_pptx(topic[:30], resp)
+                p = await asyncio.to_thread(create_pptx, topic[:30], resp)
             else:
-                p = create_word(topic[:30], resp)
+                p = await asyncio.to_thread(create_word, topic[:30], resp)
             
             with open(p, 'rb') as f:
                 await update.message.reply_document(document=f, reply_markup=build_categories_keyboard())
@@ -117,11 +112,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             context.user_data['cat'] = None
             context.user_data['dars_turi'] = None
         except Exception as e:
+            update_balance(uid, price) # Pulni qaytarish
             await update.message.reply_text(f"Fayl saqlashda xatolik yuz berdi: {e}", reply_markup=build_categories_keyboard())
     else:
-        # Bot jim qolmasligi uchun yo'naltiruvchi qism
         await update.message.reply_text(
-            "⚠️ Iltimos, avval pastdagi menyudan o'zingizga kerakli bo'limni tanlang (Masalan: Dars ishlanmasi, Maqola va h.k).",
+            "⚠️ Iltimos, avval pastdagi menyudan o'zingizga kerakli bo'limni tanlang.",
             reply_markup=build_categories_keyboard()
         )
 
@@ -132,7 +127,6 @@ async def handle_screenshot(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cat = context.user_data.get('cat')
     dars_turi = context.user_data.get('dars_turi')
     
-    # Kvitansiya (screenshot) yuborganda ham to'g'ri narxni saqlab qo'yish
     if cat == "Dars ishlanmasi" and dars_turi in DARS_TURI_PRICES:
         amount = DARS_TURI_PRICES[dars_turi]
     else:
@@ -215,5 +209,5 @@ if __name__ == '__main__':
     app.add_handler(MessageHandler(filters.PHOTO, handle_screenshot))
     app.add_handler(CallbackQueryHandler(handle_admin_callback))
     
-    print("Yangi bot (Maxsus narxlar bilan) ishga tushdi...")
+    print("Og'ir bo'limlarsiz YENGIL bot ishga tushdi...")
     app.run_polling()
