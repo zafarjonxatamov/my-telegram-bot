@@ -80,7 +80,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     user_lang = get_language(uid)
 
-   if text == "🌐 Tilni o'zgartirish":
+    if text == "🌐 Tilni o'zgartirish":
         await update.message.reply_text(
             "Iltimos, o'zingizga qulay tilni tanlang:\n"
             "Пожалуйста, выберите язык:\n"
@@ -238,5 +238,5 @@ if __name__ == '__main__':
     app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
     app.add_handler(CallbackQueryHandler(handle_callback))
-    print("Bot barcha tillar va funksiyalar bilan mukammal ishga tushdi...")
+    print("Bot xatosiz va mukammal holatda ishga tushdi...")
     app.run_polling()
