@@ -33,7 +33,6 @@ def build_categories_keyboard():
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     init_db()
-    # 1. Start tugmasini bosgan insonga yozuv
     await update.message.reply_text(
         "Assalomu alaykum men sizning AI yordamchingizman, bo'limlarni tanlang",
         reply_markup=build_categories_keyboard()
@@ -54,14 +53,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data['awaiting_dars_turi'] = False
         context.user_data['cat'] = context.user_data.get('pending_cat', "Dars ishlanmasi")
         context.user_data['dars_turi'] = DARS_TURI_MAP[text]
-        # 1. Bo'lim tanlangandan so'ng yozuv
         await update.message.reply_text("Mavzuni kiriting", reply_markup=ReplyKeyboardRemove())
         return
 
     if text in PRICES and text not in SUBTYPE_CATEGORIES:
         context.user_data['cat'] = text
         context.user_data['dars_turi'] = None
-        # 1. Bo'lim tanlangandan so'ng yozuv
         await update.message.reply_text("Mavzuni kiriting", reply_markup=ReplyKeyboardRemove())
         return
 
@@ -71,19 +68,22 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         price = PRICES.get(cat, 0)
         bal = get_balance(uid)
 
-        # 1. Mavzuni yozganidan so'ng yozuv (Agar balans yetarsiz bo'lsa)
+        # Balans yetarli bo'lmaganda chiqadigan aniq xabar
         if bal < price:
-            await update.message.reply_text(f"Kerakli mablag'ni kiriting va to'lov rasmini yuboring\nKarta: {CARD_NUMBER} ({CARD_HOLDER})")
+            await update.message.reply_text(
+                f"⚠️ Kerakli mablag'ni kiriting va to'lov rasmini yuboring.\n\n"
+                f"💳 Karta raqami: {CARD_NUMBER}\n"
+                f"👤 Karta egasi: {CARD_HOLDER}\n\n"
+                f"Summa: {price} so'm"
+            )
             return
         
-        # Agar to'lovi bo'lsa, davom etadi
         await update.message.reply_text("⏳ Fayl tayyorlanmoqda, iltimos kuting...")
         update_balance(uid, -price)
         
         ai_context = f"{cat} - {context.user_data.get('dars_turi')}" if context.user_data.get('dars_turi') else cat
         resp = get_ai_response(topic, context=ai_context, language=user_lang)
 
-        # 2. Matnli xabar chiqarilmaydi, faqat fayl yuboriladi
         try:
             if "slayd" in cat.lower():
                 p = create_pptx(topic[:30], resp)
@@ -97,6 +97,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             context.user_data['dars_turi'] = None
         except Exception as e:
             await update.message.reply_text(f"Fayl saqlashda xatolik yuz berdi: {e}", reply_markup=build_categories_keyboard())
+    else:
+        # Bot jim qolmasligi uchun yo'naltiruvchi qism
+        await update.message.reply_text(
+            "⚠️ Iltimos, avval pastdagi menyudan o'zingizga kerakli bo'limni tanlang (Masalan: Dars ishlanmasi, Maqola va h.k).",
+            reply_markup=build_categories_keyboard()
+        )
 
 async def handle_screenshot(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = update.message.from_user.id
@@ -105,7 +111,6 @@ async def handle_screenshot(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cat = context.user_data.get('cat')
     amount = PRICES.get(cat, 0)
     
-    # Bazaga to'lov so'rovini qo'shish
     payment_id = create_payment(uid, amount, file_id)
 
     await update.message.reply_text(
@@ -113,7 +118,6 @@ async def handle_screenshot(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=build_categories_keyboard()
     )
 
-    # Adminga yuboriladigan tasdiqlash tugmalari
     keyboard = InlineKeyboardMarkup([
         [
             InlineKeyboardButton("✅ Tasdiqlash", callback_data=f"approve_{payment_id}"),
@@ -183,5 +187,5 @@ if __name__ == '__main__':
     app.add_handler(MessageHandler(filters.PHOTO, handle_screenshot))
     app.add_handler(CallbackQueryHandler(handle_admin_callback))
     
-    print("Yangi bot (To'lov tizimi bilan) ishga tushdi...")
+    print("Yangi bot to'liq sozlangan holda ishga tushdi...")
     app.run_polling()
