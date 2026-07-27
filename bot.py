@@ -1,228 +1,490 @@
+# -*- coding: utf-8 -*-
 import logging, os, asyncio
-from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove, InlineKeyboardMarkup, InlineKeyboardButton
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
+from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton
+from telegram.ext import (
+    ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler,
+    filters, ContextTypes
+)
 from config import TELEGRAM_TOKEN, ADMIN_ID, CARD_NUMBER, CARD_HOLDER
-from ai_handler import get_ai_slides, create_pptx
-from database import init_db, get_balance, update_balance, get_language, set_language, create_payment, set_payment_status
+from ai_handler import get_ai_response, create_word, create_pptx, is_long_document, generate_long_document
+from database import (
+    init_db, create_payment, get_payment, set_payment_status,
+    get_language, set_language
+)
 
 logging.basicConfig(level=logging.INFO)
 
 PRICES = {
-    "Standart taqdimot (6-8 slayd)": {"price": 3500, "count": 8, "type": "ai"},
-    "Standart + taqdimot (9-12 slayd)": {"price": 4000, "count": 12, "type": "ai"},
-    "Standart pro taqdimot (9-15 slayd)": {"price": 4500, "count": 15, "type": "ai"},
-    "Premium taqdimot (8-10 slayd)": {"price": 5000, "count": 10, "type": "ai_text"},
-    "Premium + taqdimot (9-12 slayd)": {"price": 6000, "count": 12, "type": "ai_text"},
-    "Premium pro taqdimot (10-15 slayd)": {"price": 8000, "count": 15, "type": "ai_text"},
-    "BMI uchun taqdimot (14-16 slayd)": {"price": 20000, "count": 16, "type": "manual"},
-    "Magistrlik dissertatsiyasi taqdimoti (16-18 slayd)": {"price": 30000, "count": 18, "type": "manual"},
-    "PhD taqdimoti": {"price": 100000, "count": 15, "type": "manual"}
+    "Dars ishlanmasi": 4000, "Maqola": 19999, "Tezis": 9999,
+    "Mavzu bo'yicha slayd": 4999, "Mustaqil ish": 9999, "Kurs ishi": 29999,
+    "Bitiruv malakaviy ishi": 199999, "Magistrlik dissertatsiyasi": 799999,
+    "Uslubiy qo'llanma": 599999
 }
 
-def main_keyboard():
-    return ReplyKeyboardMarkup([
-        ["🎨 Taqdimot Yaratish"],
-        ["💰 Balansni Tekshirish", "🌐 Tilni O'zgartirish"]
-    ], resize_keyboard=True)
+CATEGORIES = [
+    ["Dars ishlanmasi", "Maqola"], ["Tezis", "Uslubiy qo'llanma"],
+    ["Mustaqil ish", "Mavzu bo'yicha slayd"],
+    ["Kurs ishi", "Bitiruv malakaviy ishi"], ["Magistrlik dissertatsiyasi"],
+    ["🌐 Til / Language"],
+]
+
+# --- TIL TANLASH TUGMALARI ---
+LANGUAGE_OPTIONS = {
+    "O'zbek 🇺🇿": "uz",
+    "Русский 🇷🇺": "ru",
+    "English 🇬🇧": "en",
+    "Qaraqalpaqsha 🇺🇿": "kaa",
+    "Кыргызча 🇰🇬": "kg",
+    "Қазақша 🇰🇿": "kk",
+    "Тоҷикӣ 🇹🇯": "tg",
+}
+
+LANGUAGE_KEYBOARD = [
+    ["O'zbek 🇺🇿", "Русский 🇷🇺"],
+    ["English 🇬🇧", "Qaraqalpaqsha 🇺🇿"],
+    ["Кыргызча 🇰🇬", "Қазақша 🇰🇿"],
+    ["Тоҷикӣ 🇹🇯"],
+    ["⬅️ Orqaga"],
+]
+
+# --- DARS ISHLANMASI TURLARI VA NARXLARI ---
+SUBTYPE_CATEGORIES = ["Dars ishlanmasi", "Mavzu bo'yicha slayd"]
+
+DARS_TURI_MAP = {
+    "📖 Ma'ruza": "Ma'ruza",
+    "🛠 Amaliy mashg'ulot": "Amaliy mashg'ulot",
+    "💬 Seminar": "Seminar",
+    "🔬 Laboratoriya mashg'uloti": "Laboratoriya mashg'uloti",
+}
+
+DARS_TURI_PRICES = {
+    "Ma'ruza": 6000,
+    "Amaliy mashg'ulot": 4000,
+    "Seminar": 5000,
+    "Laboratoriya mashg'uloti": 5000
+}
+
+DARS_TURI_KEYBOARD_ROWS = [
+    ["📖 Ma'ruza"],
+    ["🛠 Amaliy mashg'ulot"],
+    ["💬 Seminar"],
+    ["🔬 Laboratoriya mashg'uloti"],
+    ["⬅️ Orqaga"],
+]
+
+# ==========================================================
+#  MENYU TUGMALARI TARJIMASI (7 TIL)
+# ==========================================================
+
+CATEGORY_TRANSLATIONS = {
+    "Dars ishlanmasi": {
+        "ru": "Разработка урока", "en": "Lesson Plan",
+        "kaa": "Sabaq islanbesi", "kg": "Сабак иштелмеси",
+        "kk": "Сабақ жоспары", "tg": "Тарҳи дарс",
+    },
+    "Maqola": {
+        "ru": "Статья", "en": "Article",
+        "kaa": "Maqala", "kg": "Макала",
+        "kk": "Мақала", "tg": "Мақола",
+    },
+    "Tezis": {
+        "ru": "Тезис", "en": "Thesis",
+        "kaa": "Tezis", "kg": "Тезис",
+        "kk": "Тезис", "tg": "Тезис",
+    },
+    "Mavzu bo'yicha slayd": {
+        "ru": "Слайд по теме", "en": "Presentation Slides",
+        "kaa": "Tema boyınsha slayd", "kg": "Тема боюнча слайд",
+        "kk": "Тақырып бойынша слайд", "tg": "Слайд оид ба мавзӯъ",
+    },
+    "Mustaqil ish": {
+        "ru": "Самостоятельная работа", "en": "Independent Work",
+        "kaa": "Ózbetinshe jumıs", "kg": "Өз алдынча иш",
+        "kk": "Өздік жұмыс", "tg": "Кори мустақилона",
+    },
+    "Kurs ishi": {
+        "ru": "Курсовая работа", "en": "Course Paper",
+        "kaa": "Kurs jumısı", "kg": "Курстук иш",
+        "kk": "Курстық жұмыс", "tg": "Кори курсӣ",
+    },
+    "Bitiruv malakaviy ishi": {
+        "ru": "Выпускная квалификационная работа", "en": "Bachelor's Thesis",
+        "kaa": "Bitiriw maliymlik jumısı", "kg": "Бүтүрүү квалификациялык иши",
+        "kk": "Бітіру біліктілік жұмысы", "tg": "Кори квалификатсионии хатм",
+    },
+    "Magistrlik dissertatsiyasi": {
+        "ru": "Магистерская диссертация", "en": "Master's Dissertation",
+        "kaa": "Magistrlik dissertaciyası", "kg": "Магистрдик диссертация",
+        "kk": "Магистрлік диссертация", "tg": "Диссертатсияи магистрӣ",
+    },
+    "Uslubiy qo'llanma": {
+        "ru": "Методическое пособие", "en": "Methodological Guide",
+        "kaa": "Ádistemelik qollanba", "kg": "Усулдук колдонмо",
+        "kk": "Әдістемелік құрал", "tg": "Дастури методӣ",
+    },
+    "📖 Ma'ruza": {
+        "ru": "📖 Лекция", "en": "📖 Lecture",
+        "kaa": "📖 Lekciya", "kg": "📖 Лекция",
+        "kk": "📖 Дәріс", "tg": "📖 Лексия",
+    },
+    "🛠 Amaliy mashg'ulot": {
+        "ru": "🛠 Практическое занятие", "en": "🛠 Practical Session",
+        "kaa": "🛠 Ámeliy sabaq", "kg": "🛠 Практикалык сабак",
+        "kk": "🛠 Тәжірибелік сабақ", "tg": "🛠 Машғулоти амалӣ",
+    },
+    "💬 Seminar": {
+        "ru": "💬 Семинар", "en": "💬 Seminar",
+        "kaa": "💬 Seminar", "kg": "💬 Семинар",
+        "kk": "💬 Семинар", "tg": "💬 Семинар",
+    },
+    "🔬 Laboratoriya mashg'uloti": {
+        "ru": "🔬 Лабораторное занятие", "en": "🔬 Laboratory Session",
+        "kaa": "🔬 Laboratoriya sabaǵı", "kg": "🔬 Лабораториялык сабак",
+        "kk": "🔬 Зертханалық сабақ", "tg": "🔬 Машғулоти лабораторӣ",
+    },
+}
+
+REVERSE_TRANSLATIONS = {}
+for _canonical, _langs in CATEGORY_TRANSLATIONS.items():
+    REVERSE_TRANSLATIONS[_canonical] = _canonical
+    for _lang_code, _translated in _langs.items():
+        REVERSE_TRANSLATIONS[_translated] = _canonical
+
+
+def tr(canonical_text, lang_code):
+    return CATEGORY_TRANSLATIONS.get(canonical_text, {}).get(lang_code, canonical_text)
+
+
+CATEGORY_EMOJIS = {
+    "Dars ishlanmasi": "📝",
+    "Maqola": "📄",
+    "Tezis": "📃",
+    "Uslubiy qo'llanma": "📘",
+    "Mustaqil ish": "✍️",
+    "Mavzu bo'yicha slayd": "🖥️",
+    "Kurs ishi": "📑",
+    "Bitiruv malakaviy ishi": "🎓",
+    "Magistrlik dissertatsiyasi": "🎖️",
+}
+
+
+def build_categories_keyboard(lang_code):
+    rows = [
+        ["Dars ishlanmasi", "Maqola"],
+        ["Tezis", "Uslubiy qo'llanma"],
+        ["Mustaqil ish", "Mavzu bo'yicha slayd"],
+        ["Kurs ishi", "Bitiruv malakaviy ishi"],
+        ["Magistrlik dissertatsiyasi"],
+        ["🌐 Til / Language"],
+    ]
+
+    def _label(item):
+        translated = tr(item, lang_code)
+        emoji = CATEGORY_EMOJIS.get(item)
+        return f"{emoji} {translated}" if emoji else translated
+
+    translated_rows = [[_label(item) for item in row] for row in rows]
+    return ReplyKeyboardMarkup(translated_rows, resize_keyboard=True)
+
+
+_ALL_LANGS = ["uz", "ru", "en", "kaa", "kg", "kk", "tg"]
+for _canonical, _emoji in CATEGORY_EMOJIS.items():
+    for _lc in _ALL_LANGS:
+        _translated = tr(_canonical, _lc)
+        _labeled = f"{_emoji} {_translated}"
+        REVERSE_TRANSLATIONS[_labeled] = _canonical
+
+
+def build_dars_turi_keyboard(lang_code):
+    translated_rows = [[tr(item, lang_code) for item in row] for row in DARS_TURI_KEYBOARD_ROWS]
+    return ReplyKeyboardMarkup(translated_rows, resize_keyboard=True)
+
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     init_db()
-    context.user_data.clear()
-    await update.message.reply_text("Assalomu alaykum! Tilni tanlang:", reply_markup=InlineKeyboardMarkup([
-        [InlineKeyboardButton("🇺🇿 O'zbek", callback_data="lang_uz"), InlineKeyboardButton("🇷🇺 Русский", callback_data="lang_ru")],
-        [InlineKeyboardButton("🇬🇧 English", callback_data="lang_en")]
-    ]))
-
-async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    data = query.data
-    uid = query.from_user.id
-
-    if data.startswith("lang_"):
-        set_language(uid, data.split("_")[1])
-        await query.edit_message_text("✅ Til saqlandi! Asosiy menyu:")
-        await context.bot.send_message(chat_id=uid, text="Kerakli bo'limni tanlang:", reply_markup=main_keyboard())
-        return
-
-    if data.startswith("pay_yes_") or data.startswith("pay_no_"):
-        parts = data.split("_")
-        action = parts[1]
-        pay_id = int(parts[2])
-        target_uid = int(parts[3])
-        amount = int(parts[4])
-        
-        if action == "yes":
-            set_payment_status(pay_id, "approved")
-            update_balance(target_uid, amount)
-            await query.edit_message_caption(caption=query.message.caption + "\n\n✅ **Tasdiqlandi! Balans to'ldirildi.**", parse_mode="Markdown")
-            await context.bot.send_message(chat_id=target_uid, text="✅ To'lovingiz tasdiqlandi! Davom etishingiz mumkin.", reply_markup=main_keyboard())
-        else:
-            set_payment_status(pay_id, "rejected")
-            await query.edit_message_caption(caption=query.message.caption + "\n\n❌ **Rad etildi.**", parse_mode="Markdown")
-            await context.bot.send_message(chat_id=target_uid, text="❌ To'lov rad etildi.")
-        return
-
-    if data.startswith("cat_"):
-        cat_name = data.replace("cat_", "")
-        context.user_data['selected_cat'] = cat_name
-        p_info = PRICES[cat_name]
-        context.user_data['price_info'] = p_info
-        
-        bal = get_balance(uid)
-        price = p_info['price']
-        
-        if bal < price:
-            await query.message.reply_text(
-                f"⚠️ Mablag' yetarli emas!\nNarx: **{price} so'm**.\n"
-                f"💳 Karta: `{CARD_NUMBER}` ({CARD_HOLDER})\n\n"
-                f"Iltimos, to'lovni qilib chek rasmini shu yerga yuboring.", parse_mode="Markdown"
-            )
-            context.user_data['awaiting_payment'] = True
-            return
-
-        update_balance(uid, -price)
-        await proceed_after_payment(query.message, context, uid)
-        return
-
-    if data.startswith("color_"):
-        color = data.replace("color_", "")
-        await query.edit_message_text("⏳ Taqdimot yaratilmoqda, iltimos kuting...")
-        
-        uid = query.from_user.id
-        topic = context.user_data.get('topic')
-        r1 = context.user_data.get('reja_1', '')
-        r2 = context.user_data.get('reja_2', '')
-        r3 = context.user_data.get('reja_3', '')
-        r4 = context.user_data.get('reja_4', '')
-        p_info = context.user_data.get('price_info')
-        
-        full_prompt = f"Mavzu: {topic}\nRejalar:\n1. {r1}\n2. {r2}\n3. {r3}\n4. {r4}"
-        
-        try:
-            slides_text = get_ai_slides(full_prompt, p_info['count'])
-            file_path = create_pptx(topic[:30], slides_text, color)
-            
-            with open(file_path, 'rb') as f:
-                await context.bot.send_document(chat_id=uid, document=f, caption="✅ Marhamat, slaydingiz tayyor!", reply_markup=main_keyboard())
-            os.remove(file_path)
-            context.user_data.clear()
-        except Exception as e:
-            await context.bot.send_message(chat_id=uid, text=f"❌ Xatolik: {e}", reply_markup=main_keyboard())
-        return
-
-async def proceed_after_payment(message, context, uid):
-    p_info = context.user_data.get('price_info')
-    if p_info['type'] == 'manual':
-        context.user_data['state'] = 'manual_source'
-        await message.reply_text("📥 To'lov qabul qilindi! Iltimos, ushbu ilmiy ish / manba hujjatini yuboring. Admin uni shaxsan o'zi tayyorlab beradi.")
-    elif p_info['type'] == 'ai_text':
-        context.user_data['state'] = 'waiting_source_text'
-        await message.reply_text("📄 Premium turdagi taqdimot uchun asosiy matnni yoki faylni yuboring:")
-    else:
-        context.user_data['state'] = 'waiting_topic'
-        await message.reply_text("✏️ Taqdimot mavzusini kiriting:", reply_markup=ReplyKeyboardRemove())
-
-async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = update.message.from_user.id
-    username = update.message.from_user.username or "Noma'lum"
-    file_id = update.message.photo[-1].file_id
-    
-    p_info = context.user_data.get('price_info', {"price": 5000})
-    price = p_info['price']
-    
-    payment_id = create_payment(uid, price, file_id)
-    caption = f"💳 **Yangi to'lov cheki!**\n\n👤 Foydalanuvchi: @{username} (ID: `{uid}`)\n💵 Summa: {price} so'm\n🆔 ID: `{payment_id}`"
-    
-    keyboard = InlineKeyboardMarkup([[
-        InlineKeyboardButton("✅ Tasdiqlash", callback_data=f"pay_yes_{payment_id}_{uid}_{price}"),
-        InlineKeyboardButton("❌ Rad etish", callback_data=f"pay_no_{payment_id}_{uid}_{price}")
-    ]])
-    
-    if ADMIN_ID:
-        await context.bot.send_photo(chat_id=int(ADMIN_ID), photo=file_id, caption=caption, reply_markup=keyboard, parse_mode="Markdown")
-        await update.message.reply_text("✅ Chek admingacha yuborildi. Tasdiqlanishini kuting!")
+    user_lang = get_language(uid)
+    context.user_data.clear()
+    reply_markup = build_categories_keyboard(user_lang)
+    await update.message.reply_text(
+        "Assalomu alaykum! Men sizning AI yordamchingizman. Bo'limni tanlang:",
+        reply_markup=reply_markup
+    )
+
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = update.message.from_user.id
     text = update.message.text
-    state = context.user_data.get('state')
 
-    if text == "💰 Balansni Tekshirish":
-        bal = get_balance(uid)
-        await update.message.reply_text(f"💳 Sizning balansingiz: **{bal} so'm**", parse_mode="Markdown")
+    text = REVERSE_TRANSLATIONS.get(text, text)
+    user_lang = get_language(uid)
+
+    # --- Til tanlash menyusini ochish ---
+    if text == "🌐 Til / Language":
+        await update.message.reply_text(
+            "🌐 Tilni tanlang / Выберите язык / Choose a language:",
+            reply_markup=ReplyKeyboardMarkup(LANGUAGE_KEYBOARD, resize_keyboard=True)
+        )
         return
 
-    if text == "🌐 Tilni O'zgartirish":
-        await update.message.reply_text("Tilni tanlang:", reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("🇺🇿 O'zbek", callback_data="lang_uz"), InlineKeyboardButton("🇷🇺 Русский", callback_data="lang_ru")],
-            [InlineKeyboardButton("🇬🇧 English", callback_data="lang_en")]
-        ]))
-        return
-
-    if text == "🎨 Taqdimot Yaratish":
-        buttons = []
-        for cat_name in PRICES.keys():
-            buttons.append([InlineKeyboardButton(cat_name, callback_data=f"cat_{cat_name}")])
-        await update.message.reply_text("🎓 Taqdimot turini tanlang:", reply_markup=InlineKeyboardMarkup(buttons))
-        return
-
-    if state == 'manual_source':
-        cat_name = context.user_data.get('selected_cat', 'BMI')
-        caption = f"🎓 **Yangi maxsus buyurtma (Admin uchun)!**\n\n👤 Foydalanuvchi ID: `{uid}`\n📚 Turi: {cat_name}\n\nManba quyida yuborildi:"
-        if ADMIN_ID:
-            await context.bot.send_message(chat_id=int(ADMIN_ID), text=caption, parse_mode="Markdown")
-            if update.message.document:
-                await context.bot.send_document(chat_id=int(ADMIN_ID), document=update.message.document.file_id)
-            else:
-                await context.bot.send_message(chat_id=int(ADMIN_ID), text=f"Manba matni:\n{text}")
-        await update.message.reply_text("✅ Manbangiz adminga yuborildi! Admin tayyorlab shaxsiy akkauntingizga yuboradi.", reply_markup=main_keyboard())
+    # --- Orqaga qaytish ---
+    if text == "⬅️ Orqaga":
         context.user_data.clear()
+        await update.message.reply_text(
+            "Bosh menyu:",
+            reply_markup=build_categories_keyboard(user_lang)
+        )
         return
 
-    if state == 'waiting_topic':
-        context.user_data['topic'] = text
-        context.user_data['state'] = 'waiting_reja_1'
-        await update.message.reply_text("✍️ 1-rejani kiriting:")
+    # --- Foydalanuvchi tilni tanladi ---
+    if text in LANGUAGE_OPTIONS:
+        lang_code = LANGUAGE_OPTIONS[text]
+        set_language(uid, lang_code)
+        await update.message.reply_text(
+            f"✅ Til tanlandi: {text}\nEndi barcha hujjatlar shu tilda yaratiladi.",
+            reply_markup=build_categories_keyboard(lang_code)
+        )
         return
 
-    if state == 'waiting_reja_1':
-        context.user_data['reja_1'] = text
-        context.user_data['state'] = 'waiting_reja_2'
-        await update.message.reply_text("✍️ 2-rejani kiriting:")
+    # --- Dars ishlanmasi yoki Mavzu bo'yicha slayd tanlanganda — avval turi so'raladi ---
+    if text in SUBTYPE_CATEGORIES:
+        context.user_data.clear()
+        context.user_data['awaiting_dars_turi'] = True
+        context.user_data['pending_cat'] = text
+        display_cat = tr(text, user_lang)
+        await update.message.reply_text(
+            f"📚 {display_cat} turini tanlang:",
+            reply_markup=build_dars_turi_keyboard(user_lang)
+        )
         return
 
-    if state == 'waiting_reja_2':
-        context.user_data['reja_2'] = text
-        context.user_data['state'] = 'waiting_reja_3'
-        await update.message.reply_text("✍️ 3-rejani kiriting:")
+    # --- Foydalanuvchi turini tanladi (Dars ishlanmasi yoki Slayd uchun) ---
+    if context.user_data.get('awaiting_dars_turi') and text in DARS_TURI_MAP:
+        context.user_data['awaiting_dars_turi'] = False
+        pending_cat = context.user_data.get('pending_cat', "Dars ishlanmasi")
+        context.user_data['cat'] = pending_cat
+        dars_turi_key = DARS_TURI_MAP[text]
+        context.user_data['dars_turi'] = dars_turi_key
+        context.user_data['custom_price'] = DARS_TURI_PRICES.get(dars_turi_key, PRICES[pending_cat])
+
+        await update.message.reply_text(
+            "📝 Mavzuni kiriting:",
+            reply_markup=build_categories_keyboard(user_lang)
+        )
         return
 
-    if state == 'waiting_reja_3':
-        context.user_data['reja_3'] = text
-        context.user_data['state'] = 'waiting_reja_4'
-        await update.message.reply_text("✍️ 4-rejani kiriting:")
+    # --- Oddiy bo'lim (Maqola, Tezis va h.k.) tanlanganda ---
+    if text in PRICES:
+        context.user_data.clear()
+        context.user_data['cat'] = text
+        context.user_data['dars_turi'] = None
+        context.user_data['custom_price'] = None
+        await update.message.reply_text("📝 Mavzuni kiriting:")
         return
 
-    if state == 'waiting_reja_4':
-        context.user_data['reja_4'] = text
-        context.user_data['state'] = 'waiting_color'
-        
-        keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton("⬜ Klassik (Oq/Kulrang)", callback_data="color_klassik")],
-            [InlineKeyboardButton("⬛ Qora stil", callback_data="color_qora")],
-            [InlineKeyboardButton("🟦 Ko'k akademik", callback_data="color_kok")]
-        ])
-        await update.message.reply_text("🎨 Taqdimot dizayn va rangini tanlang:", reply_markup=keyboard)
+    cat = context.user_data.get('cat')
+
+    # --- Agar to'lov chekini kutayotgan bo'lsak, lekin foydalanuvchi matn yozsa ---
+    if context.user_data.get('awaiting_payment_screenshot'):
+        await update.message.reply_text(
+            "📸 Iltimos, avval to'lov chekining rasmini (screenshot) yuboring."
+        )
         return
 
-    await update.message.reply_text("⚠️ Kerakli bo'limni tanlang:", reply_markup=main_keyboard())
+    if not cat:
+        await update.message.reply_text("⚠️ Avval bo'limni tanlang!")
+        return
+
+    # --- Mavzu birinchi marta kiritilganda — narx va to'lov ma'lumotlarini beramiz ---
+    if not context.user_data.get('pending_topic'):
+        price = context.user_data.get('custom_price') or PRICES.get(cat, 0)
+        context.user_data['pending_topic'] = text
+        context.user_data['awaiting_payment_screenshot'] = True
+
+        await update.message.reply_text(
+            f"💳 Kerakli mablag': {price} so'm\n\n"
+            f"Karta raqami: {CARD_NUMBER}\n"
+            f"Egasi: {CARD_HOLDER}\n\n"
+            f"✅ To'lovni amalga oshirib, chek (rasm) yuboring."
+        )
+        return
+
+
+async def handle_screenshot(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    uid = update.message.from_user.id
+
+    if not context.user_data.get('awaiting_payment_screenshot'):
+        return
+
+    cat = context.user_data.get('cat')
+    dars_turi = context.user_data.get('dars_turi')
+    topic = context.user_data.get('pending_topic')
+    price = context.user_data.get('custom_price') or PRICES.get(cat, 0)
+    user_lang = get_language(uid)
+
+    file_id = update.message.photo[-1].file_id
+
+    payment_id = create_payment(
+        uid, price, file_id,
+        category=cat, dars_turi=dars_turi, topic=topic, language=user_lang
+    )
+
+    context.user_data.clear()
+
+    await update.message.reply_text(
+        "✅ Chekingiz qabul qilindi va admin tekshiruviga yuborildi.\n"
+        "Tasdiqlangach, hujjatingiz tayyorlanib, sizga yuboriladi."
+    )
+
+    keyboard = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("✅ Tasdiqlash", callback_data=f"approve_{payment_id}"),
+            InlineKeyboardButton("❌ Rad etish", callback_data=f"reject_{payment_id}")
+        ]
+    ])
+
+    username = update.message.from_user.username or "yo'q"
+    display_cat = tr(cat, user_lang)
+    display_turi = tr_dars_turi_by_key(dars_turi, user_lang) if dars_turi else ""
+    turi_line = f"\nTuri: {display_turi}" if display_turi else ""
+
+    caption = (
+        f"🆕 Yangi buyurtma\n"
+        f"ID: {payment_id}\n"
+        f"Foydalanuvchi: {uid} (@{username})\n"
+        f"Bo'lim: {display_cat}{turi_line}\n"
+        f"Mavzu: {topic}\n"
+        f"Summa: {price} so'm"
+    )
+
+    await context.bot.send_photo(
+        chat_id=ADMIN_ID,
+        photo=file_id,
+        caption=caption,
+        reply_markup=keyboard
+    )
+
+
+def tr_dars_turi_by_key(dars_turi_key, lang_code):
+    """Dars turi kalitidan (masalan 'Ma'ruza') tugma matnini topib, tarjima qiladi."""
+    for label, key in DARS_TURI_MAP.items():
+        if key == dars_turi_key:
+            return tr(label, lang_code)
+    return dars_turi_key
+
+
+async def _generate_and_send(payment_id, admin_message):
+    """To'lov tasdiqlangandan so'ng hujjatni generatsiya qilib, faqat fayl
+    ko'rinishida foydalanuvchiga yuboradi."""
+    payment = get_payment(payment_id)
+    if not payment:
+        return
+    _, user_id, amount, file_id, status, category, dars_turi, topic, language = payment
+    language = language or "uz"
+
+    ai_context = f"{category} - {dars_turi}" if dars_turi else category
+
+    bot = admin_message.get_bot()
+
+    try:
+        await bot.send_message(chat_id=user_id, text="⏳ Hujjatingiz tayyorlanmoqda, iltimos kuting...")
+    except Exception:
+        pass
+
+    if is_long_document(category):
+        progress = {"idx": 0, "total": 0, "section": ""}
+
+        def _progress_callback(idx, total, section_title):
+            progress["idx"] = idx
+            progress["total"] = total
+            progress["section"] = section_title
+
+        task = asyncio.create_task(
+            asyncio.to_thread(generate_long_document, topic, category, _progress_callback, language)
+        )
+        while not task.done():
+            await asyncio.sleep(4)
+            if progress["total"]:
+                pct = int(progress["idx"] / progress["total"] * 100)
+                try:
+                    await admin_message.edit_caption(
+                        caption=(
+                            f"⏳ Tayyorlanmoqda (ID: {payment_id}): "
+                            f"{progress['idx']}/{progress['total']} bo'lim ({pct}%)"
+                        )
+                    )
+                except Exception:
+                    pass
+        resp = await task
+    else:
+        resp = await asyncio.to_thread(get_ai_response, topic, ai_context, language)
+
+    try:
+        if "slayd" in category.lower():
+            p = create_pptx(topic[:20], resp)
+        else:
+            p = create_word(topic[:20], resp)
+        with open(p, 'rb') as f:
+            await bot.send_document(chat_id=user_id, document=f)
+        os.remove(p)
+        try:
+            await admin_message.edit_caption(caption=f"✅ Tayyor va yuborildi (ID: {payment_id}).")
+        except Exception:
+            pass
+    except Exception as e:
+        try:
+            await bot.send_message(chat_id=user_id, text=f"❌ Fayl yaratishda xatolik: {e}")
+        except Exception:
+            pass
+        try:
+            await admin_message.edit_caption(caption=f"❌ Xatolik yuz berdi (ID: {payment_id}): {e}")
+        except Exception:
+            pass
+
+
+async def handle_admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    if query.from_user.id != ADMIN_ID:
+        await query.answer("⛔ Sizda ruxsat yo'q!", show_alert=True)
+        return
+
+    action, payment_id_str = query.data.split("_")
+    payment_id = int(payment_id_str)
+
+    payment = get_payment(payment_id)
+    if not payment:
+        await query.edit_message_caption(caption="⚠️ Bu buyurtma topilmadi.")
+        return
+
+    _, user_id, amount, file_id, status, category, dars_turi, topic, language = payment
+
+    if status != "pending":
+        await query.edit_message_caption(caption=f"ℹ️ Bu buyurtma allaqachon '{status}' holatida.")
+        return
+
+    if action == "approve":
+        set_payment_status(payment_id, "approved")
+        await query.edit_message_caption(
+            caption=f"✅ Tasdiqlandi (ID: {payment_id}). Hujjat tayyorlanmoqda..."
+        )
+        asyncio.create_task(_generate_and_send(payment_id, query.message))
+
+    elif action == "reject":
+        set_payment_status(payment_id, "rejected")
+        await query.edit_message_caption(caption=f"❌ Rad etildi (ID: {payment_id}).")
+        await context.bot.send_message(
+            chat_id=user_id,
+            text="❌ To'lovingiz rad etildi. Savol bo'lsa, admin bilan bog'laning."
+        )
+
 
 if __name__ == '__main__':
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
     app.add_handler(CommandHandler('start', start))
-    app.add_handler(MessageHandler(filters.PHOTO | filters.Document.ALL, handle_photo))
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
-    app.add_handler(CallbackQueryHandler(handle_callback))
-    print("Bot muvaffaqiyatli ishga tushdi...")
+    app.add_handler(MessageHandler(filters.PHOTO, handle_screenshot))
+    app.add_handler(CallbackQueryHandler(handle_admin_callback))
+    print("V4.0 BOT ISHGA TUSHDI...")
     app.run_polling()
