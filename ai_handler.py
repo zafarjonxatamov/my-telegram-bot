@@ -1,22 +1,11 @@
 import os
 import requests
-from docx import Document
 from pptx import Presentation
 from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
-
 from config import AI_MODEL, OPENAI_API_KEY
 
 PEXELS_API_KEY = "EwSRENDIIVaujdEYjtp5WNAr26n67yI5GIJF7oK8gUR1b1yln3z3uSw3"
-
-LANGUAGE_NAMES = {
-    "uz": "O'zbek (Uzbek)", "ru": "Rus (Русский)", "en": "Ingliz (English)",
-    "kaa": "Qoraqalpoq (Qaraqalpaqsha)", "kg": "Qirg'iz (Кыргызcha)",
-    "kk": "Qozoq (Қазақша)", "tg": "Tojik (Тоҷикӣ)",
-}
-
-def get_language_name(lang_code):
-    return LANGUAGE_NAMES.get(lang_code, "O'zbek")
 
 def _try_openai(system_prompt, prompt):
     from openai import OpenAI
@@ -26,47 +15,23 @@ def _try_openai(system_prompt, prompt):
     return response.choices[0].message.content
 
 def generate_plans(topic, language="uz"):
-    lang_name = get_language_name(language)
-    system_prompt = f"Siz tajribali professor sifatida {lang_name} tilida ilmiy mavzular uchun 4 ta mukammal reja tuzib berasiz."
+    system_prompt = "Siz tajribali professor sifatida ilmiy mavzular uchun 4 ta mukammal taqdimot rejasini tuzib berasiz."
     prompt = f"'{topic}' mavzusi uchun 4 ta asosiy reja tuzib bering. Faqat rejalarni matn ko'rinishida yozing."
     return _try_openai(system_prompt, prompt)
 
-def get_ai_response(prompt, context="", language="uz"):
-    lang_name = get_language_name(language)
-    
-    # Agar so'ralayotgan narsa Slayd bo'lmasa (Ya'ni Maqola, Tezis, Kurs ishi yoki Dars ishlanmasi bo'lsa):
-    if "slayd" not in context.lower():
-        system_prompt = (
-            f"Siz professional akademik tadqiqotchisiz. Barcha javoblar FAKAT {lang_name} tilida bo'lsin. "
-            f"Hech qanday slayd teglari yoki belgilari ([Slayd 1] va hokazo) ishlatmang. "
-            f"Faqat toza ilmiy matn formatida, kirish, asosiy qism, tahlillar va xulosa qismlaridan iborat mukammal maqola yozing."
-        )
-    else:
-        # Slaydlar uchun maxsus format
-        system_prompt = (
-            f"Siz professional akademik taqdimot yaratuvchisiz. Barcha javoblar FAKAT {lang_name} tilida bo'lsin. "
-            f"Aniq 8 ta slayd tayyorlang. "
-            f"Har bir slaydni quyidagi qat'iy formatda yozing:\n"
-            f"[Slayd 1]\nSarlavha: ...\nMatn: ...\nRasm: (Faqat bitta aniq inglizcha sport so'zi yozing: handball, goalkeeper, stadium, fitness, running, sport)"
-        )
-        
+def get_ai_slides(prompt, slide_count=8, language="uz"):
+    system_prompt = (
+        f"Siz professional akademik taqdimot yaratuvchisiz. Barcha javoblar O'zbek tilida bo'lsin. "
+        f"Aniq {slide_count} ta slayd tayyorlang. "
+        f"Har bir slaydni quyidagi qat'iy formatda yozing:\n"
+        f"[Slayd 1]\nSarlavha: ...\nMatn: ...\nRasm: (Faqat bitta aniq inglizcha kalit so'z: education, science, university, technology, business)"
+    )
     return _try_openai(system_prompt, prompt)
-
-def create_word(title, content):
-    doc = Document()
-    doc.add_heading(title, 0)
-    for line in content.split('\n'):
-        if line.strip(): 
-            doc.add_paragraph(line)
-    file_path = "Tayyor_Hujjat.docx"
-    doc.save(file_path)
-    return file_path
 
 def _search_pexels_image(query, save_path="temp_slide_image.jpg"):
     if not PEXELS_API_KEY: return None
     search_query = query.replace("Rasm:", "").strip().lower()
-    if len(search_query) < 3 or "office" in search_query or "people" in search_query:
-        search_query = "handball goalkeeper"
+    if len(search_query) < 3: search_query = "education"
         
     try:
         resp = requests.get(
@@ -76,24 +41,28 @@ def _search_pexels_image(query, save_path="temp_slide_image.jpg"):
             timeout=10
         )
         photos = resp.json().get("photos", [])
-        if not photos: 
-            resp = requests.get("https://api.pexels.com/v1/search", headers={"Authorization": PEXELS_API_KEY}, params={"query": "handball sport", "per_page": 1}, timeout=10)
-            photos = resp.json().get("photos", [])
-            if not photos: return None
+        if not photos: return None
             
         img_resp = requests.get(photos[0]["src"]["large"], timeout=10)
         with open(save_path, "wb") as f: f.write(img_resp.content)
         return save_path
     except: return None
 
-def create_pptx(title, content):
+def create_pptx(title, content, color_scheme="klassik"):
     prs = Presentation()
     prs.slide_width = Inches(13.33)
     prs.slide_height = Inches(7.5)
     blank_layout = prs.slide_layouts[6]
     
+    # Ranglar sxemasi
+    if color_scheme == "qora":
+        bg_color, title_color, text_color, card_bg = RGBColor(15, 23, 42), RGBColor(255, 255, 255), RGBColor(203, 213, 225), RGBColor(30, 41, 59)
+    elif color_scheme == "kok":
+        bg_color, title_color, text_color, card_bg = RGBColor(239, 246, 255), RGBColor(30, 58, 138), RGBColor(30, 41, 59), RGBColor(255, 255, 255)
+    else: # klassik oq/kulrang
+        bg_color, title_color, text_color, card_bg = RGBColor(241, 245, 249), RGBColor(15, 23, 42), RGBColor(51, 65, 85), RGBColor(255, 255, 255)
+
     slides_data = content.split('[Slayd')
-    
     for s_data in slides_data:
         if not s_data.strip(): continue
         lines = [ln.strip() for ln in s_data.split('\n') if ln.strip()]
@@ -101,9 +70,9 @@ def create_pptx(title, content):
         if lines[0].endswith(']'): lines = lines[1:] 
         if not lines: continue
             
-        slide_title = "Sarlavha yo'q"
+        slide_title = "Sarlavha"
         body_text_lines = []
-        image_keyword = "handball goalkeeper"
+        image_keyword = "education"
         
         for line in lines:
             if line.startswith("Sarlavha:"):
@@ -118,34 +87,26 @@ def create_pptx(title, content):
         body_text = '\n'.join(body_text_lines)
         
         slide = prs.slides.add_slide(blank_layout)
-        
-        background = slide.background
-        fill = background.fill
-        fill.solid()
-        fill.fore_color.rgb = RGBColor(241, 245, 249)
+        slide.background.fill.solid()
+        slide.background.fill.fore_color.rgb = bg_color
         
         title_box = slide.shapes.add_textbox(Inches(0.8), Inches(0.6), Inches(11.7), Inches(1.0))
-        tf_title = title_box.text_frame
-        tf_title.word_wrap = True
-        p_title = tf_title.paragraphs[0]
+        p_title = title_box.text_frame.paragraphs[0]
         p_title.text = slide_title
         p_title.font.size = Pt(28)
         p_title.font.bold = True
-        p_title.font.color.rgb = RGBColor(15, 23, 42)
+        p_title.font.color.rgb = title_color
         
         card = slide.shapes.add_shape(1, Inches(0.8), Inches(1.8), Inches(7.0), Inches(5.0))
         card.fill.solid()
-        card.fill.fore_color.rgb = RGBColor(255, 255, 255)
+        card.fill.fore_color.rgb = card_bg
         card.line.color.rgb = RGBColor(203, 213, 225)
-        card.line.width = Pt(1.5)
         
         text_box = slide.shapes.add_textbox(Inches(1.0), Inches(2.1), Inches(6.6), Inches(4.4))
-        tf_body = text_box.text_frame
-        tf_body.word_wrap = True
-        p_body = tf_body.paragraphs[0]
+        p_body = text_box.text_frame.paragraphs[0]
         p_body.text = body_text if body_text else "Ma'lumot mavjud emas."
         p_body.font.size = Pt(18)
-        p_body.font.color.rgb = RGBColor(51, 65, 85)
+        p_body.font.color.rgb = text_color
         
         image_path = _search_pexels_image(image_keyword)
         if image_path and os.path.exists(image_path):
@@ -154,6 +115,6 @@ def create_pptx(title, content):
             except: pass
             finally: os.remove(image_path)
             
-    file_path = "Zamonaviy_Slayd.pptx"
+    file_path = "Tayyor_Taqdimot.pptx"
     prs.save(file_path)
     return file_path
