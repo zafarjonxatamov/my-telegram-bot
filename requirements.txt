@@ -1,5 +1,6 @@
-python-telegram-bot
-openai
-python-docx
-python-pptx
+aiogram
+google-generativeai
+python-dotenv
 requests
+python-pptx
+pypdf
