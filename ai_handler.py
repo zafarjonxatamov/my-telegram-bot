@@ -40,7 +40,6 @@ def _try_gemini(system_prompt, prompt):
     if "candidates" in data: return data["candidates"][0]["content"]["parts"][0]["text"]
     raise Exception(data.get("error", {}).get("message", str(data)))
 
-# QAT'IY ANDOZALAR (Sizning talablaringiz asosida)
 STRUCTURE_GUIDES = {
     "Dars ishlanmasi - Ma'ruza": """MA’RUZA MASHG’ULOTI
 MAVZU: [Mavzu nomi]
@@ -54,14 +53,26 @@ REJA:
 
 TAYANCH IBORALAR: (aynan 30 ta so’zdan iborat atamalar)
 
-1-reja: (aynan 180 ta so’zdan iborat matn bo’lsin)
-2-reja: (aynan 180 ta so’zdan iborat matn bo’lsin)
-3-reja: (aynan 180 ta so’zdan iborat matn bo’lsin)
-4-reja: (aynan 180 ta so’zdan iborat matn bo’lsin)
+=========================================
+ASOSIY QISM: REJALAR BO'YICHA MATNLAR
+(DIQQAT: Quyidagi har bir reja matni JIDDIY, ILMIY va JUDA BATAFSIL bo'lishi shart! Har bir reja uchun aniq, kamida 180-200 so'zdan iborat matn yozing. Hech qanday qisqartirishlarsiz, to'liq yoriting!)
+
+1-REJA BAYONI: 
+(1-reja bo'yicha batafsil, kamida 180 ta so'zdan iborat keng qamrovli, ilmiy matn yozing)
+
+2-REJA BAYONI: 
+(2-reja bo'yicha batafsil, kamida 180 ta so'zdan iborat keng qamrovli, ilmiy matn yozing)
+
+3-REJA BAYONI: 
+(3-reja bo'yicha batafsil, kamida 180 ta so'zdan iborat keng qamrovli, ilmiy matn yozing)
+
+4-REJA BAYONI: 
+(4-reja bo'yicha batafsil, kamida 180 ta so'zdan iborat keng qamrovli, ilmiy matn yozing)
+=========================================
 
 NAZORAT UCHUN SAVOLLAR: (aynan 10 ta savol yozing)
 AMALIY TOPSHIRIQ (KEYS-STADI): (bitta to'liq keys holatini yozing)
-MAVZU YUZASIDAN TEST: (aynan 10 ta test yarating va har biri 4 tadan variantda bo’lsin)
+MAVZU YUZASIDAN TEST: (aynan 10 ta test yarating va har biri 4 tadan variantda (A, B, C, D) bo’lsin)
 MUSTAQIL IZLANISHLAR UCHUN MAVZULAR: (aynan 2 ta mavzu)
 TAVSIYA ETILGAN ADABIYOTLAR: (Mavzuga oid mahalliy olimlar tomonidan yaratilgan adabiyotlar bo’lsin, 4 yoki 5 ta)
 """,
