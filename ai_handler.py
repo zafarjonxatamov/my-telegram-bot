@@ -1,5 +1,6 @@
 import os
 import re
+import zipfile
 from openai import OpenAI
 from pptx import Presentation
 from pptx.util import Inches, Pt
@@ -26,18 +27,29 @@ def get_ai_slides(prompt: str, count: int = 8) -> str:
     )
     return response.choices[0].message.content
 
+def extract_zip_templates():
+    """ZIP arxivlarni ochib chiqish"""
+    try:
+        for file in os.listdir('.'):
+            if file.endswith('.zip'):
+                with zipfile.ZipFile(file, 'r') as zip_ref:
+                    zip_ref.extractall('.')
+    except Exception as e:
+        print(f"ZIP ochishda xatolik: {e}")
+
 def create_pptx(title: str, slides_text: str, color_theme: str = "klassik") -> str:
-    """Loyihdagi barcha shablonlarni ko'rib chiqib, eng mosini tanlab PowerPoint yaratish"""
+    """Shablonlardan foydalanib PowerPoint yaratish (xatolikka chidamli)"""
     
-    # Papkadagi barcha .pptx fayllarni topish (hozirgi fayllar va o'zingiz yuklaydigan yangi shablonlar)
+    extract_zip_templates()
+    
+    # Barcha .pptx fayllarni topish
     template_files = [f for f in os.listdir('.') if f.endswith('.pptx') and not f.startswith('presentation_')]
     
     selected_template = None
     
     if template_files:
-        # OpenAI orqali mavzuga eng mos keladigan shablon nomini tanlatamiz
         try:
-            prompt_text = f"Quyidagi shablon fayllar ro'yxati bor: {template_files}.\nFoydalanuvchi kiritgan mavzu: '{title}'.\nShu mavzuga eng ko'p mos keladigan bitta fayl nomini faqat o'zini yoz (boshqa so'z yozma). Agar mos keladigani aniq bo'lmasa, ro'yxatdagi birinchisini yoz."
+            prompt_text = f"Quyidagi shablon fayllar ro'yxati bor: {template_files[:30]}.\nFoydalanuvchi kiritgan mavzu: '{title}'.\nShu mavzuga eng ko'p mos keladigan bitta fayl nomini faqat o'zini yoz. Agar aniq bo'lmasa, ro'yxatdagi birinchisini yoz."
             response = client.chat.completions.create(
                 model=AI_MODEL,
                 messages=[{"role": "user", "content": prompt_text}],
@@ -51,10 +63,16 @@ def create_pptx(title: str, slides_text: str, color_theme: str = "klassik") -> s
         except:
             selected_template = template_files[0]
 
-    # Agar tanlangan shablon mavjud bo'lsa, o'shandan nusxa olib ishlatamiz
-    if selected_template and os.path.exists(selected_template):
-        prs = Presentation(selected_template)
-    else:
+    # Shablonni ochishga harakat qilish
+    prs = None
+    if selected_template:
+        try:
+            prs = Presentation(selected_template)
+        except Exception as e:
+            print(f"Shablonni ochib bo'lmadi ({selected_template}): {e}")
+            
+    # Agar shablon ochilmasa, yangi toza taqdimot ochamiz
+    if prs is None:
         prs = Presentation()
 
     # 1. Sarlavha slaydi
