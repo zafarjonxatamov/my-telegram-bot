@@ -88,11 +88,16 @@ Rasm: (Faqatgina shu slayd mavzusiga mos Pexels saytidan qidirish uchun BITTA IN
 def get_structure_guide(context):
     return STRUCTURE_GUIDES.get(context, "Mavzuni to'liq ilmiy, akademik va grammatik jihatdan xatosiz yoriting. Uydirma faktlar ishlatmang.")
 
+# XATOLARNI TUTIB TELEGRAMGA YUBORUVCHI QISM (YANGILANDI)
 def _call_ai(system_prompt, prompt):
+    error_msgs = []
     for name, func in [("OpenAI", _try_openai), ("Gemini", _try_gemini)]:
-        try: return func(system_prompt, prompt)
-        except: continue
-    raise Exception("AI provayder javob qaytarmadi, birozdan so'ng urinib ko'ring.")
+        try: 
+            return func(system_prompt, prompt)
+        except Exception as e: 
+            error_msgs.append(f"❌ {name} xatosi: {str(e)}")
+            continue
+    raise Exception("\n" + "\n\n".join(error_msgs))
 
 def get_ai_response(prompt, context="", language="uz"):
     structure = get_structure_guide(context)
