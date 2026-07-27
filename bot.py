@@ -80,13 +80,18 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     user_lang = get_language(uid)
 
-    if text == "🌐 Tilni o'zgartirish":
-        await update.message.reply_text("Iltimos, tilni tanlang / Please select language:", reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("🇺🇿 O'zbek", callback_data="lang_uz"), InlineKeyboardButton("🇷🇺 Русский", callback_data="lang_ru")],
-            [InlineKeyboardButton("🇬🇧 English", callback_data="lang_en"), InlineKeyboardButton(" Karakalpak", callback_data="lang_kaa")],
-            [InlineKeyboardButton("🇰🇬 Кыргызча", callback_data="lang_kg"), InlineKeyboardButton("🇰🇿 Қазақша", callback_data="lang_kk")],
-            [InlineKeyboardButton("🇹🇯 Тоҷикӣ", callback_data="lang_tg")]
-        ]))
+   if text == "🌐 Tilni o'zgartirish":
+        await update.message.reply_text(
+            "Iltimos, o'zingizga qulay tilni tanlang:\n"
+            "Пожалуйста, выберите язык:\n"
+            "Please select a language:", 
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🇺🇿 O'zbekcha", callback_data="lang_uz"), InlineKeyboardButton("🇷🇺 Русский", callback_data="lang_ru")],
+                [InlineKeyboardButton("🇬🇧 English", callback_data="lang_en"), InlineKeyboardButton(" Karakalpak", callback_data="lang_kaa")],
+                [InlineKeyboardButton("🇰🇬 Кыргызcha", callback_data="lang_kg"), InlineKeyboardButton("🇰🇿 Қазақша", callback_data="lang_kk")],
+                [InlineKeyboardButton("🇹🇯 Тоҷикӣ", callback_data="lang_tg")]
+            ])
+        )
         return
 
     if text in SUBTYPE_CATEGORIES:
