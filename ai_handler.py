@@ -9,9 +9,7 @@ from config import AI_MODEL, OPENAI_API_KEY, CLAUDE_API_KEY, GEMINI_API_KEY
 PEXELS_API_KEY = "EwSRENDIIVaujdEYjtp5WNAr26n67yI5GIJF7oK8gUR1b1yln3z3uSw3"
 
 LANGUAGE_NAMES = {
-    "uz": "o'zbek", "ru": "rus (Русский)", "en": "ingliz (English)",
-    "kaa": "qoraqalpoq (Qaraqalpaqsha)", "kg": "qirg'iz (Кыргызcha)",
-    "kk": "qozoq (Қазақша)", "tg": "tojik (Тоҷикӣ)",
+    "uz": "o'zbek", "ru": "rus (Русский)", "en": "ingliz (English)"
 }
 
 def get_language_name(lang_code):
@@ -24,14 +22,6 @@ def _try_openai(system_prompt, prompt):
     response = client.chat.completions.create(model=AI_MODEL, messages=messages)
     return response.choices[0].message.content
 
-def _try_claude(system_prompt, prompt):
-    headers = {"x-api-key": CLAUDE_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json"}
-    payload = {"model": "claude-sonnet-4-6", "max_tokens": 8192, "system": system_prompt, "messages": [{"role": "user", "content": prompt}]}
-    resp = requests.post("https://api.anthropic.com/v1/messages", headers=headers, json=payload, timeout=60)
-    data = resp.json()
-    if "content" in data: return data["content"][0]["text"]
-    raise Exception(data.get("error", {}).get("message", str(data)))
-
 def _try_gemini(system_prompt, prompt):
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}"
     payload = {"system_instruction": {"parts": [{"text": system_prompt}]}, "contents": [{"parts": [{"text": prompt}]}], "generationConfig": {"maxOutputTokens": 8192}}
@@ -40,43 +30,8 @@ def _try_gemini(system_prompt, prompt):
     if "candidates" in data: return data["candidates"][0]["content"]["parts"][0]["text"]
     raise Exception(data.get("error", {}).get("message", str(data)))
 
+# Faqat qolgan menyular uchun andozalar
 STRUCTURE_GUIDES = {
-    "Dars ishlanmasi - Ma'ruza": """MA’RUZA MASHG’ULOTI
-MAVZU: [Mavzu nomi]
-MAQSAD: (aynan 22 ta so’zdan iborat matn yarating)
-VAZIFALARI: (aniq vazifalarni sanab o'ting)
-REJA:
-1. [1-reja nomi]
-2. [2-reja nomi]
-3. [3-reja nomi]
-4. [4-reja nomi]
-
-TAYANCH IBORALAR: (aynan 30 ta so’zdan iborat atamalar)
-
-=========================================
-ASOSIY QISM: REJALAR BO'YICHA MATNLAR
-(DIQQAT: Quyidagi har bir reja matni JIDDIY, ILMIY va JUDA BATAFSIL bo'lishi shart! Har bir reja uchun aniq, kamida 180-200 so'zdan iborat matn yozing. Hech qanday qisqartirishlarsiz, to'liq yoriting!)
-
-1-REJA BAYONI: 
-(1-reja bo'yicha batafsil, kamida 180 ta so'zdan iborat keng qamrovli, ilmiy matn yozing)
-
-2-REJA BAYONI: 
-(2-reja bo'yicha batafsil, kamida 180 ta so'zdan iborat keng qamrovli, ilmiy matn yozing)
-
-3-REJA BAYONI: 
-(3-reja bo'yicha batafsil, kamida 180 ta so'zdan iborat keng qamrovli, ilmiy matn yozing)
-
-4-REJA BAYONI: 
-(4-reja bo'yicha batafsil, kamida 180 ta so'zdan iborat keng qamrovli, ilmiy matn yozing)
-=========================================
-
-NAZORAT UCHUN SAVOLLAR: (aynan 10 ta savol yozing)
-AMALIY TOPSHIRIQ (KEYS-STADI): (bitta to'liq keys holatini yozing)
-MAVZU YUZASIDAN TEST: (aynan 10 ta test yarating va har biri 4 tadan variantda (A, B, C, D) bo’lsin)
-MUSTAQIL IZLANISHLAR UCHUN MAVZULAR: (aynan 2 ta mavzu)
-TAVSIYA ETILGAN ADABIYOTLAR: (Mavzuga oid mahalliy olimlar tomonidan yaratilgan adabiyotlar bo’lsin, 4 yoki 5 ta)
-""",
-
     "Dars ishlanmasi - Amaliy mashg'ulot": """AMALIY MASHGʻULOT
 MAVZU: [Mavzu nomi]
 Mashgʻulotning maqsadi: (aynan 50 ta so’zdan iborat matn yarating)
@@ -142,21 +97,22 @@ Har bir slaydni [Slayd 1], [Slayd 2] deb boshlang va Sarlavha hamda Asosiy matn 
 }
 
 def get_structure_guide(context):
-    return STRUCTURE_GUIDES.get(context, "Mavzuni ilmiy, professional tarzda yoriting.")
+    return STRUCTURE_GUIDES.get(context, "Mavzuni ilmiy, professional tarzda aniq yoriting. Matn tushunarli bo'lsin.")
 
 def _call_ai(system_prompt, prompt):
-    for name, func in [("OpenAI", _try_openai), ("Claude", _try_claude), ("Gemini", _try_gemini)]:
+    # Birinchi OpenAI, keyin Gemini ishlaydi
+    for name, func in [("OpenAI", _try_openai), ("Gemini", _try_gemini)]:
         try: return func(system_prompt, prompt)
         except: continue
-    raise Exception("Barcha AI provayderlar ishlamadi. Iltimos keyinroq urinib ko'ring.")
+    raise Exception("AI provayder javob qaytarmadi, birozdan so'ng urinib ko'ring.")
 
 def get_ai_response(prompt, context="", language="uz"):
     structure = get_structure_guide(context)
     lang_name = get_language_name(language)
     system_prompt = (
         f"Siz akademik AI yordamchisiz. Bo'lim: {context}. "
-        f"MUHIM: Barcha ma'lumotni {lang_name} tilida yozing.\n"
-        f"Qat'iy yozish qoidasi (ushbu tuzilma va so'z limitlariga aniq rioya qiling):\n{structure}"
+        f"Barcha ma'lumotni {lang_name} tilida yozing.\n"
+        f"Qat'iy yozish qoidasi:\n{structure}"
     )
     return _call_ai(system_prompt, prompt)
 
@@ -204,7 +160,6 @@ def create_pptx(title, content):
         text_placeholder.left, text_placeholder.top = Inches(0.5), Inches(1.5)
         text_placeholder.width, text_placeholder.height = Inches(5.5), Inches(5)
         
-        # Slayd uchun rasm
         image_query = slide_title if len(slide_title) > 5 else title
         image_path = _search_pexels_image(image_query)
         if image_path and os.path.exists(image_path):
