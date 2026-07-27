@@ -8,15 +8,14 @@ from config import AI_MODEL, OPENAI_API_KEY, CLAUDE_API_KEY, GEMINI_API_KEY
 
 PEXELS_API_KEY = "EwSRENDIIVaujdEYjtp5WNAr26n67yI5GIJF7oK8gUR1b1yln3z3uSw3"
 
-# 7 TA TIL QAYTARILDI
 LANGUAGE_NAMES = {
-    "uz": "o'zbek", "ru": "rus (Русский)", "en": "ingliz (English)",
-    "kaa": "qoraqalpoq (Qaraqalpaqsha)", "kg": "qirg'iz (Кыргызcha)",
-    "kk": "qozoq (Қазақша)", "tg": "tojik (Тоҷикӣ)",
+    "uz": "O'zbek (Uzbek)", "ru": "Rus (Русский)", "en": "Ingliz (English)",
+    "kaa": "Qoraqalpoq (Qaraqalpaqsha)", "kg": "Qirg'iz (Кыргызcha)",
+    "kk": "Qozoq (Қазақша)", "tg": "Tojik (Тоҷикӣ)",
 }
 
 def get_language_name(lang_code):
-    return LANGUAGE_NAMES.get(lang_code, "o'zbek")
+    return LANGUAGE_NAMES.get(lang_code, "O'zbek")
 
 def _try_openai(system_prompt, prompt):
     from openai import OpenAI
@@ -33,73 +32,65 @@ def _try_gemini(system_prompt, prompt):
     if "candidates" in data: return data["candidates"][0]["content"]["parts"][0]["text"]
     raise Exception(data.get("error", {}).get("message", str(data)))
 
+# Yaxshilangan, ilmiy va qat'iy andozalar (Prompts)
 STRUCTURE_GUIDES = {
-    "Dars ishlanmasi - Amaliy mashg'ulot": """AMALIY MASHGʻULOT
-MAVZU: [Mavzu nomi]
-Mashgʻulotning maqsadi: (aynan 50 ta so’zdan iborat matn yarating)
-Topshiriqlar: (aynan 3 ta topshiriq)
-Mashgʻulotning borishi:
-1-bosqich: (aynan 50 ta so’zdan iborat matn)
-2-bosqich: (aynan 25 ta so’zdan iborat matn)
-3-bosqich: (aynan 25 ta so’zdan iborat matn)
-
-AMALIY TOPSHIRIQLAR VA METODIK OʻYINLAR
-Topshiriq: (mavzuga oid sport va harakatli o’yinlar bo'yicha ma'lumot)
-Yakuniy xulosa: (aynan 25 ta so’zdan iborat matn)
-Nazorat savollari: (aynan 6 ta nazorat savoli)
-TAVSIYA ETILGAN ADABIYOTLAR: (Mavzuga oid mahalliy olimlar tomonidan yaratilgan adabiyotlar bo’lsin, 4 yoki 5 ta)
-Ilova: (Mavzuga oid rasmlar yoki texnologik xaritani matnli ta'rifi)
+    "Dars ishlanmasi - Amaliy mashg'ulot": """AMALIY MASHGʻULOT ISHLANMASI
+Mavzuni to'liq ilmiy, akademik va pedagogik uslubda yoriting. Hech qanday uydirma faktlar, mantiqsiz so'zlar yoki boshqa tillarni aralashtirmang.
+Quyidagi tuzilmaga qat'iy amal qiling:
+1. MAVZU: [Mavzu nomi]
+2. Mashgʻulotning maqsadi: (Talabalar nima o'rganishi haqida batafsil va mantiqiy asoslangan maqsad).
+3. Mashg'ulot vazifalari: (3-4 ta aniq ta'limiy vazifalar).
+4. Asosiy tushunchalar: (Mavzuga oid kamida 3 ta terminning ilmiy izohi).
+5. Mashgʻulotning borishi (Bosqichlar): 
+   - Kirish qismi (tashkiliy qism va mavzuga kirish).
+   - Asosiy qism (Amaliy topshiriqlar, mashqlar va ularning ilmiy tahlili).
+   - Yakuniy qism (Xulosa va baholash).
+6. Mustaqil bajarish uchun topshiriqlar.
+7. Nazorat savollari (Mavzu yuzasidan 5 ta mantiqiy savol).
+8. Tavsiya etilgan asosiy adabiyotlar (Haqiqiy olimlar va kitoblar nomlari).
 """,
 
-    "Dars ishlanmasi - Seminar": """SEMINAR MASHG’ULOTI
-MAVZU: [Mavzu nomi]
-Reja:
-1. [1-reja]
-2. [2-reja]
-3. [3-reja]
-4. [4-reja]
-Mashg‘ulotning maqsadi: (aynan 60 ta so’zdan iborat matn)
-Mashg‘ulot turi: (mashg'ulot turini yozing)
-Mashg‘ulot muammosi: (aynan 30 ta so’zdan iborat matn)
-O‘quv maqsadlari: (maqsadlarni sanab yozing)
-Seminar reja: (batafsil yozing)
-Asosiy tushunchalar: (qisqacha ta'riflari bilan)
-Guruh topshiriqlari: (aniq topshiriqlar bering)
-Seminar metodlari: (sanab o'ting)
-Uyga vazifa: Mini-insho yozish (1-1.5 sahifa)
-Seminarlarda muhokama qilish uchun qo’shimcha savollar: (aynan 5 ta savol)
-TAVSIYA ETILGAN ADABIYOTLAR: (Mavzuga oid mahalliy olimlar tomonidan yaratilgan adabiyotlar bo’lsin, 4 yoki 5 ta)
+    "Dars ishlanmasi - Seminar": """SEMINAR MASHG’ULOTI ISHLANMASI
+Mavzuni to'liq ilmiy, akademik va pedagogik uslubda yoriting. Barcha ma'lumotlar 100% to'g'ri, mantiqiy bog'langan va xatosiz bo'lishi shart.
+Quyidagi tuzilmaga qat'iy amal qiling:
+1. MAVZU: [Mavzu nomi]
+2. Mashg‘ulotning maqsadi va vazifalari: (Batafsil va ilmiy asoslangan).
+3. O'quv rejalari: (Mavzuni ochib beruvchi 3-4 ta asosiy reja).
+4. Asosiy qism (Rejalarning batafsil bayoni): Har bir reja bo'yicha ilmiy dalillar, faktlar va qoidalar bilan asoslangan kengaytirilgan matn.
+5. Seminar uchun munozara savollari: (Guruh bo'lib ishlash uchun 5 ta o'ylantiradigan savol).
+6. Tahliliy topshiriqlar (Keys-stadi): Talabalar yechishi kerak bo'lgan bitta kichik amaliy muammo.
+7. Foydalanilgan adabiyotlar.
 """,
 
-    "Dars ishlanmasi - Laboratoriya mashg'uloti": """LABORATORIYA MASHG’ULOTI
-MAVZU: [Mavzu nomi]
-Reja:
-1. [1-reja]
-2. [2-reja]
-3. [3-reja]
-4. [4-reja]
-Mashg‘ulotning maqsadi: (aynan 60 ta so’zdan iborat matn)
-Mashg‘ulot turi: (mashg'ulot turini yozing)
-Mashg‘ulot muammosi: (aynan 30 ta so’zdan iborat matn)
-O‘quv maqsadlari: (maqsadlarni sanab yozing)
-Laboratoriya reja: (batafsil yozing)
-Asosiy tushunchalar: (qisqacha ta'riflari bilan)
-Guruh topshiriqlari: (aniq topshiriqlar bering)
-Laboratoriya metodlari: (sanab o'ting)
-Uyga vazifa: Mini-insho yozish (1-1.5 sahifa)
-Laboratoriyalarda muhokama qilish uchun qo’shimcha savollar: (aynan 5 ta savol)
-TAVSIYA ETILGAN ADABIYOTLAR: (Mavzuga oid mahalliy olimlar tomonidan yaratilgan adabiyotlar bo’lsin, 4 yoki 5 ta)
+    "Dars ishlanmasi - Laboratoriya mashg'uloti": """LABORATORIYA MASHG’ULOTI ISHLANMASI
+Mavzuni ilmiy, aniq va texnik/metodik jihatdan to'g'ri yoriting. Tajriba yoki mashg'ulot jarayoni ketma-ketligini aniq tushuntiring.
+1. MAVZU: [Mavzu nomi]
+2. Laboratoriya mashg'ulotining maqsadi.
+3. Kerakli jihozlar va uskunalar.
+4. Xavfsizlik texnikasi qoidalari.
+5. Mashg'ulotni bajarish tartibi (Qadam-baqadam aniq ko'rsatmalar, mantiqiy ketma-ketlikda).
+6. Olingan natijalarni tahlil qilish usullari.
+7. Xulosa va topshiriqlar.
 """,
 
-    "Mavzu bo'yicha slayd": """Slayd (Taqdimot) uchun ma'lumotlarni juda sodda, toza va chiroyli dizaynda matnlar tekisligi bilan yoriting.
-Zarur joylarda ma'lumotlarni jadvallar (Markdown ustunlari) va chiroyli ro'yxatlar shaklida keltiring. 
-Matnlar mavzuga aynan mos, aniq va ortiqcha gaplarsiz bo'lsin. Kamida 10 ta, ko'pi bilan 15 ta slayd chiqaring.
-Har bir slaydni [Slayd 1], [Slayd 2] deb boshlang va Sarlavha hamda Asosiy matn (jadval/ro'yxat)ni kiriting.
+    "Mavzu bo'yicha slayd": """Siz professional prezentatsiya (Slayd) yaratuvchisiz.
+Matnlar juda qisqa, aniq, ilmiy asoslangan va dizaynga mos bo'lishi kerak. 
+Uydirma so'zlar, mantiqsiz iboralar ishlatish QAT'IYAN TAQIQLANADI. 
+Kamida 8 ta, ko'pi bilan 12 ta slayd tayyorlang.
+
+Har bir slaydni quyidagi formatda yozing:
+[Slayd 1]
+Sarlavha: (Mavzuga oid aniq sarlavha)
+Matn: (2-3 ta qisqa, tushunarli bullet point yoki faktlar).
+
+[Slayd 2]
+Sarlavha: (Keyingi qism sarlavhasi)
+Matn: (Aniq ma'lumotlar).
 """
 }
 
 def get_structure_guide(context):
-    return STRUCTURE_GUIDES.get(context, "Mavzuni ilmiy, professional tarzda aniq yoriting. Matn tushunarli bo'lsin.")
+    return STRUCTURE_GUIDES.get(context, "Mavzuni to'liq ilmiy, akademik va grammatik jihatdan xatosiz yoriting. Uydirma faktlar ishlatmang.")
 
 def _call_ai(system_prompt, prompt):
     for name, func in [("OpenAI", _try_openai), ("Gemini", _try_gemini)]:
@@ -110,9 +101,15 @@ def _call_ai(system_prompt, prompt):
 def get_ai_response(prompt, context="", language="uz"):
     structure = get_structure_guide(context)
     lang_name = get_language_name(language)
+    
+    # AI ga qat'iy buyruq (System Prompt)
     system_prompt = (
-        f"Siz akademik AI yordamchisiz. Bo'lim: {context}. "
-        f"Barcha ma'lumotni {lang_name} tilida yozing.\n"
+        f"Siz O'zbekistonning eng tajribali professori va fan nomzodisiz. "
+        f"Sizning vazifangiz universitet talabalari va o'qituvchilari uchun yuqori sifatli, ilmiy materiallar tayyorlash. "
+        f"Barcha javoblarni FAKAT VA FAKAT {lang_name} tilida yozing. Boshqa tillarni aralashtirmang. "
+        f"Faktlar 100% to'g'ri, mantiqli va ilmiy tilda bo'lishi shart. Hech qachon mavjud bo'lmagan so'zlarni, g'ayritabiiy qoidalarni yoki mantiqsiz ro'yxatlarni o'ylab topmang. "
+        f"Agar mavzu sport (masalan Yengil atletika) bo'lsa, qoidalar va turlarini to'g'ri yozing (suv osti yengil atletikasi kabi uydirmalar yozmang).\n\n"
+        f"Bo'lim: {context}.\n"
         f"Qat'iy yozish qoidasi:\n{structure}"
     )
     return _call_ai(system_prompt, prompt)
@@ -128,11 +125,16 @@ def create_word(title, content):
 
 def _search_pexels_image(query, save_path="temp_slide_image.jpg"):
     if not PEXELS_API_KEY: return None
+    # Slayd uchun rasm qidirishni aniqroq qilish
+    search_query = query.replace("Sarlavha:", "").strip()
+    if len(search_query) < 4:
+        search_query = "education university" # Agar mantiqsiz kichik so'z bo'lsa, ta'lim rasmini oladi
+        
     try:
         resp = requests.get(
             "https://api.pexels.com/v1/search",
             headers={"Authorization": PEXELS_API_KEY}, 
-            params={"query": query, "per_page": 1, "orientation": "landscape"}, 
+            params={"query": search_query, "per_page": 1, "orientation": "landscape"}, 
             timeout=10
         )
         photos = resp.json().get("photos", [])
@@ -145,13 +147,22 @@ def _search_pexels_image(query, save_path="temp_slide_image.jpg"):
 def create_pptx(title, content):
     prs = Presentation()
     slide_layout = prs.slide_layouts[1]
-    paragraphs = [p for p in content.split('\n\n') if len(p.strip()) > 10]
     
-    for p in paragraphs[:15]:
-        lines = [ln for ln in p.strip().split('\n') if ln.strip()]
+    # Slaydlarni to'g'ri bo'laklarga ajratish
+    slides_data = content.split('[Slayd')
+    
+    for s_data in slides_data:
+        if not s_data.strip(): continue
+        
+        lines = [ln.strip() for ln in s_data.split('\n') if ln.strip()]
+        if len(lines) < 2: continue
+        
+        # '1]', '2]' kabi raqamlarni olib tashlash
+        if lines[0].endswith(']'): lines = lines[1:] 
         if not lines: continue
-        slide_title = lines[0].strip().replace("[Slayd", "").replace("]", "").strip()
-        body_text = '\n'.join(lines[1:])
+            
+        slide_title = lines[0].replace("Sarlavha:", "").strip()
+        body_text = '\n'.join([ln.replace("Matn:", "").strip() for ln in lines[1:]])
         
         slide = prs.slides.add_slide(slide_layout)
         slide.shapes.title.text = slide_title
