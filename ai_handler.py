@@ -4,7 +4,7 @@ from docx import Document
 from pptx import Presentation
 from pptx.util import Inches
 
-from config import AI_MODEL, OPENAI_API_KEY, CLAUDE_API_KEY, GEMINI_API_KEY
+from config import AI_MODEL, OPENAI_API_KEY
 
 PEXELS_API_KEY = "EwSRENDIIVaujdEYjtp5WNAr26n67yI5GIJF7oK8gUR1b1yln3z3uSw3"
 
@@ -23,14 +23,6 @@ def _try_openai(system_prompt, prompt):
     messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": prompt}]
     response = client.chat.completions.create(model=AI_MODEL, messages=messages)
     return response.choices[0].message.content
-
-def _try_gemini(system_prompt, prompt):
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}"
-    payload = {"system_instruction": {"parts": [{"text": system_prompt}]}, "contents": [{"parts": [{"text": prompt}]}], "generationConfig": {"maxOutputTokens": 8192}}
-    resp = requests.post(url, json=payload, timeout=60)
-    data = resp.json()
-    if "candidates" in data: return data["candidates"][0]["content"]["parts"][0]["text"]
-    raise Exception(data.get("error", {}).get("message", str(data)))
 
 STRUCTURE_GUIDES = {
     "Dars ishlanmasi - Amaliy mashg'ulot": """AMALIY MASHGʻULOT ISHLANMASI
@@ -88,16 +80,6 @@ Rasm: (Faqatgina ingliz tilida BITTA SO'Z yozing. Masalan: handball, goalkeeper,
 def get_structure_guide(context):
     return STRUCTURE_GUIDES.get(context, "Mavzuni to'liq ilmiy, akademik va grammatik jihatdan xatosiz yoriting. Uydirma faktlar ishlatmang.")
 
-def _call_ai(system_prompt, prompt):
-    error_msgs = []
-    for name, func in [("OpenAI", _try_openai), ("Gemini", _try_gemini)]:
-        try: 
-            return func(system_prompt, prompt)
-        except Exception as e: 
-            error_msgs.append(f"❌ {name} xatosi: {str(e)}")
-            continue
-    raise Exception("\n" + "\n\n".join(error_msgs))
-
 def get_ai_response(prompt, context="", language="uz"):
     structure = get_structure_guide(context)
     lang_name = get_language_name(language)
@@ -110,7 +92,7 @@ def get_ai_response(prompt, context="", language="uz"):
         f"Bo'lim: {context}.\n"
         f"Qat'iy yozish qoidasi:\n{structure}"
     )
-    return _call_ai(system_prompt, prompt)
+    return _try_openai(system_prompt, prompt)
 
 def create_word(title, content):
     doc = Document()
