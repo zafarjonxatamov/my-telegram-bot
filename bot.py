@@ -32,6 +32,7 @@ WELCOME_TEXT = """Assalomu alaykum! Slayd va Hujjatlar yaratuvchi AI yordamching
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     init_db()
+    context.user_data.clear()
     await update.message.reply_text(WELCOME_TEXT, reply_markup=build_categories_keyboard())
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -80,7 +81,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"⚠️ Mablag' yetarli emas! Narx: {price} so'm.\n💳 Karta: {CARD_NUMBER}\nChek rasmini yuboring.")
         return
 
-    # REJA TUZISH (Timeout oldi olindi)
     msg = await update.message.reply_text("⏳ Sun'iy intellekt reja tuzmoqda, biroz kuting...")
     
     try:
@@ -162,5 +162,5 @@ if __name__ == '__main__':
     app.add_handler(CommandHandler('start', start))
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
     app.add_handler(CallbackQueryHandler(handle_callback))
-    print("Bot xatosiz rejimda ishga tushdi...")
+    print("Bot muvaffaqiyatli ishga tushdi...")
     app.run_polling()
