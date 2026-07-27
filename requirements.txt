@@ -3,6 +3,6 @@ openai
 python-dotenv
 requests
 python-pptx
-pypdf
+python-pdf
 python-telegram-bot
-docx
+python-docx
