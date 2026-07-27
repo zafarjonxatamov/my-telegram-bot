@@ -1,5 +1,5 @@
 import os
-from google importgenerativeai as genai
+import google.generativeai as genai
 from pptx import Presentation
 from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
@@ -54,10 +54,9 @@ def create_pptx(title: str, slides_text: str, color_theme: str = "klassik") -> s
         s_title = parts[0].strip()
         s_content = parts[1].strip() if len(parts) > 1 else ""
 
-        slide_layout = prs.slide_layouts[1] # Sarlavha va matn layouti
+        slide_layout = prs.slide_layouts[1]
         slide = prs.slides.add_slide(slide_layout)
         
-        # Sarlavha va matnni qo'shish
         if slide.shapes.title:
             slide.shapes.title.text = s_title
         
@@ -66,7 +65,6 @@ def create_pptx(title: str, slides_text: str, color_theme: str = "klassik") -> s
             tf = body_shape.text_frame
             tf.text = s_content
 
-    # Faylga saqlash
     filename = f"presentation_{os.urandom(4).hex()}.pptx"
     prs.save(filename)
     return filename
