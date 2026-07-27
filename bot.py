@@ -35,6 +35,42 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data.clear()
     await update.message.reply_text(WELCOME_TEXT, reply_markup=build_categories_keyboard())
 
+# RASM (CHEK) KELGANDA ISHLaydigan FUNKSIYA
+async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    uid = update.message.from_user.id
+    username = update.message.from_user.username or "Noma'lum"
+    
+    # Ma'lumotlar bazasida to'lov yozuvi yaratish
+    payment_id = create_payment(uid, 5000) # Standart yoki oxirgi narx
+    
+    caption = (
+        f"💳 **Yangi to'lov cheki keldi!**\n\n"
+        f"👤 Foydalanuvchi: @{username} (ID: `{uid}`)\n"
+        f"🆔 To'lov ID: `{payment_id}`"
+    )
+    
+    keyboard = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("✅ Tasdiqlash", callback_data=f"pay_yes_{payment_id}_{uid}"),
+            InlineKeyboardButton("❌ Rad etish", callback_data=f"pay_no_{payment_id}_{uid}")
+        ]
+    ])
+    
+    if ADMIN_ID:
+        try:
+            await context.bot.send_photo(
+                chat_id=int(ADMIN_ID),
+                photo=update.message.photo[-1].file_id,
+                caption=caption,
+                reply_markup=keyboard,
+                parse_mode="Markdown"
+            )
+            await update.message.reply_text("✅ Chekingiz adminga yuborildi. Tez orada balansingiz to'ldiriladi, kuting!")
+        except Exception as e:
+            await update.message.reply_text(f"❌ Chekni yuborishda xatolik: {e}")
+    else:
+        await update.message.reply_text("⚠️ Admin ID sozlanmagan!")
+
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = update.message.from_user.id
     text = update.message.text
@@ -78,7 +114,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     bal = get_balance(uid)
 
     if bal < price:
-        await update.message.reply_text(f"⚠️ Mablag' yetarli emas! Narx: {price} so'm.\n💳 Karta: {CARD_NUMBER}\nChek rasmini yuboring.")
+        await update.message.reply_text(
+            f"⚠️ Mablag' yetarli emas! Narx: {price} so'm.\n"
+            f"💳 Karta: {CARD_NUMBER} ({CARD_HOLDER})\n\n"
+            f"Iltimos, to'lovni qilib chek rasmini shu yerga yuboring."
+        )
         return
 
     msg = await update.message.reply_text("⏳ Sun'iy intellekt reja tuzmoqda, biroz kuting...")
@@ -110,6 +150,28 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if data.startswith("lang_"):
         set_language(uid, data.split("_")[1])
         await query.edit_message_text("✅ Til o'zgartirildi!")
+        return
+
+    # ADMIN TO'LOVNI TASDIqlashi YOKI RAD ETISHI
+    if data.startswith("pay_yes_") or data.startswith("pay_no_"):
+        parts = data.split("_")
+        action = parts[1]
+        pay_id = int(parts[2])
+        target_uid = int(parts[3])
+        
+        if action == "yes":
+            set_payment_status(pay_id, "approved")
+            update_balance(target_uid, 10000) # Qo'shiladigan summa
+            await query.edit_message_caption(caption=query.message.caption + "\n\n✅ **Tasdiqlandi! Balans qo'shildi.**", parse_mode="Markdown")
+            try:
+                await context.bot.send_message(chat_id=target_uid, text="✅ To'lovingiz tasdiqlandi! Balansingizga mablag' qo'shildi. Endi mavzuni yuborishingiz mumkin.", reply_markup=build_categories_keyboard())
+            except: pass
+        else:
+            set_payment_status(pay_id, "rejected")
+            await query.edit_message_caption(caption=query.message.caption + "\n\n❌ **Rad etildi.**", parse_mode="Markdown")
+            try:
+                await context.bot.send_message(chat_id=target_uid, text="❌ To'lov cheki rad etildi. Administrator bilan bog'laning.")
+            except: pass
         return
 
     if data == "regenerate_plan":
@@ -160,7 +222,8 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 if __name__ == '__main__':
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
     app.add_handler(CommandHandler('start', start))
+    app.add_handler(MessageHandler(filters.PHOTO, handle_photo)) # Chek rasmini tutib olish uchun
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
     app.add_handler(CallbackQueryHandler(handle_callback))
-    print("Bot muvaffaqiyatli ishga tushdi...")
+    print("Bot chek qabul qilish va tasdiqlash funksiyasi bilan ishga tushdi...")
     app.run_polling()
