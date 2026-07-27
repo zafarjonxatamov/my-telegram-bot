@@ -30,7 +30,6 @@ DARS_TURI_MAP = {
 DARS_TURI_KEYBOARD_ROWS = [["🛠 Amaliy mashg'ulot", "💬 Seminar"], ["🔬 Laboratoriya mashg'uloti"]]
 
 def build_categories_keyboard():
-    # Asosiy menyuga "Tilni o'zgartirish" tugmasi qo'shildi
     return ReplyKeyboardMarkup([
         ["Dars ishlanmasi", "Maqola"], 
         ["Tezis", "Mustaqil ish"],
@@ -46,10 +45,30 @@ def build_language_keyboard():
         [InlineKeyboardButton("🇺🇿 Qaraqalpaqsha", callback_data="lang_kaa")]
     ])
 
+# YANGILANGAN, PROFESSIONAL XUSH KELIBSIZ XABARI
+WELCOME_TEXT = """Assalomu alaykum! Slayd va Hujjatlar yaratuvchi AI yordamchingizga xush kelibsiz. 🎓
+
+📝 Quyidagi menyudan kerakli bo'limni tanlang.
+
+⚠️ Sifatli va aniq natija olish uchun quyidagi qoidalarga amal qiling:
+
+• Mavzuni iloji boricha batafsil va to'liq yozing. 
+  ❌ Noto'g'ri: "Tarix"
+  ✅ To'g'ri: "Qo'qon xonligi asoschisi Shohruhbiy va Olimxon davri tarixi"
+  
+  ❌ Noto'g'ri: "Darvozabonlar"
+  ✅ To'g'ri: "Gandbolchi darvozabonlarning mashg'ulot va musobaqa faoliyatida taktik tayyorgarligi"
+
+• Har bir mavzuga umumiy bilimdondek qarayman. Tor doiradagi mavzularni kiritishda ularning qaysi fanga mansubligini ham qo'shib yozing (masalan: Sport pedagogikasi, Jismoniy tarbiya).
+• Qisqartma yoki imloviy xatoli so'zlarga tushunmay qolishim mumkin. 
+• Kiritilgan mavzuga tushunmagan holda, umuman boshqa mavzuga chalg'ib ketishim ehtimoli bor. 
+
+❗️ Iltimos, mavzu yozishda e'tiborli bo'ling va to'liq nomini kiriting!"""
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     init_db()
     await update.message.reply_text(
-        "Assalomu alaykum men sizning AI yordamchingizman. Bo'limni tanlang:",
+        WELCOME_TEXT,
         reply_markup=build_categories_keyboard()
     )
 
@@ -58,7 +77,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     user_lang = get_language(uid)
 
-    # Agar foydalanuvchi menyudan Til tugmasini bosa:
     if text == "🌐 Tilni o'zgartirish":
         await update.message.reply_text(
             "Iltimos, o'zingizga qulay tilni tanlang:\nВыберите язык:\nChoose your language:", 
@@ -76,13 +94,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data['awaiting_dars_turi'] = False
         context.user_data['cat'] = context.user_data.get('pending_cat', "Dars ishlanmasi")
         context.user_data['dars_turi'] = DARS_TURI_MAP[text]
-        await update.message.reply_text("Mavzuni kiriting", reply_markup=ReplyKeyboardRemove())
+        await update.message.reply_text("✏️ Mavzuni batafsil va qoidalarga amal qilgan holda kiriting:", reply_markup=ReplyKeyboardRemove())
         return
 
     if text in PRICES and text not in SUBTYPE_CATEGORIES:
         context.user_data['cat'] = text
         context.user_data['dars_turi'] = None
-        await update.message.reply_text("Mavzuni kiriting", reply_markup=ReplyKeyboardRemove())
+        await update.message.reply_text("✏️ Mavzuni batafsil va qoidalarga amal qilgan holda kiriting:", reply_markup=ReplyKeyboardRemove())
         return
 
     cat = context.user_data.get('cat')
@@ -106,7 +124,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
         
-        await update.message.reply_text("⏳ Fayl tayyorlanmoqda, iltimos kuting...")
+        await update.message.reply_text("⏳ Fayl tayyorlanmoqda, iltimos kuting. (Bu jarayon 1-2 daqiqa vaqt olishi mumkin)...")
         update_balance(uid, -price)
         
         ai_context = f"{cat} - {dars_turi}" if dars_turi else cat
@@ -129,7 +147,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(f"Fayl saqlashda xatolik yuz berdi: {e}", reply_markup=build_categories_keyboard())
     else:
         await update.message.reply_text(
-            "⚠️ Iltimos, avval pastdagi menyudan o'zingizga kerakli bo'limni tanlang.",
+            "⚠️ Iltimos, avval pastdagi menyudan o'zingizga kerakli hujjat turini tanlang.",
             reply_markup=build_categories_keyboard()
         )
 
@@ -229,5 +247,5 @@ if __name__ == '__main__':
     app.add_handler(MessageHandler(filters.PHOTO, handle_screenshot))
     app.add_handler(CallbackQueryHandler(handle_callback))
     
-    print("Bot 7 ta til tugmasi bilan ishga tushdi...")
+    print("Bot yangi xush kelibsiz xabari bilan ishga tushdi...")
     app.run_polling()
