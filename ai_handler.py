@@ -3,7 +3,6 @@ import re
 from openai import OpenAI
 from pptx import Presentation
 from pptx.util import Inches, Pt
-from pptx.dml.color import RGBColor
 from config import OPENAI_API_KEY, AI_MODEL
 
 client = OpenAI(api_key=OPENAI_API_KEY)
@@ -27,26 +26,36 @@ def get_ai_slides(prompt: str, count: int = 8) -> str:
     return response.choices[0].message.content
 
 def create_pptx(title: str, slides_text: str, color_theme: str = "klassik") -> str:
-    """Papkadagi shablonlardan foydalanib to'g'ri formatlangan PowerPoint yaratish"""
+    """Mavzuga mos keluvchi to'g'ri shablonni tanlab PowerPoint yaratish"""
     
     template_files = [f for f in os.listdir('.') if f.endswith('.pptx') and not f.startswith('presentation_')]
     
     selected_template = None
-    if template_files:
+    
+    # Agar mavzuga mos keluvchi kalit so'zlar bo'lsa, fayl nomlaridan qidiramiz
+    title_lower = title.lower()
+    for tf in template_files:
+        tf_lower = tf.lower()
+        # Mavzurdagi biron bir so'z fayl nomida qatnashgan bo'lsa, o'shani olamiz
+        words = title_lower.split()
+        if any(word in tf_lower for word in words if len(word) > 3):
+            selected_template = tf
+            break
+
+    # Agar mos keladigani topilmasa va shablonlar ko'p bo'lsa, AI orqali aniqlaymiz yoki birinchisini olamiz
+    if not selected_template and template_files:
         try:
-            prompt_text = f"Quyidagi shablon fayllar ro'yxati bor: {template_files[:40]}.\nFoydalanuvchi kiritgan mavzu: '{title}'.\nShu mavzuga eng ko'p mos keladigan bitta fayl nomini faqat o'zini yoz. Agar aniq bo'lmasa, ro'yxatdagi birinchisini yoz."
+            prompt_text = f"Quyidagi shablon fayllar ro'yxati bor: {template_files[:30]}.\nFoydalanuvchi kiritgan mavzu: '{title}'.\nShu mavzuga eng mos keladigan bitta fayl nomini yoz. Faqat fayl nomini yoz."
             response = client.chat.completions.create(
                 model=AI_MODEL,
                 messages=[{"role": "user", "content": prompt_text}],
-                temperature=0.2
+                temperature=0.1
             )
             suggested = response.choices[0].message.content.strip()
             if suggested in template_files:
                 selected_template = suggested
-            else:
-                selected_template = template_files[0]
         except:
-            selected_template = template_files[0]
+            pass
 
     prs = None
     if selected_template:
@@ -55,18 +64,18 @@ def create_pptx(title: str, slides_text: str, color_theme: str = "klassik") -> s
         except Exception as e:
             print(f"Shablonni ochib bo'lmadi: {e}")
             
+    # Agar shablon ochilmasa yoki mos kelmasa, xatolik chiqarmaslik uchun toza taqdimot ochamiz
     if prs is None:
         prs = Presentation()
 
-    # 1. Sarlavha slaydi (1-slayd)
+    # 1. Sarlavha slaydi
     if len(prs.slides) > 0:
         slide = prs.slides[0]
         for shape in slide.shapes:
             if shape.has_text_frame:
                 shape.text_frame.text = clean_text(title)
-                # Sarlavha harflarini sig'adigan qilib moslash
                 for paragraph in shape.text_frame.paragraphs:
-                    paragraph.font.size = Pt(28) # Juda katta bo'lib ketib sig'may qolishining oldini olamiz
+                    paragraph.font.size = Pt(28)
                 break
     else:
         slide_layout = prs.slide_layouts[0]
@@ -74,7 +83,7 @@ def create_pptx(title: str, slides_text: str, color_theme: str = "klassik") -> s
         if slide.shapes.title:
             slide.shapes.title.text = clean_text(title)
 
-    # Matnni qismlarga bo'lish va qolgan slaydlarni qo'shish
+    # Matnni qismlarga bo'lish va slaydlarni qo'shish
     chunks = slides_text.split("Sarlavha:")
     
     for chunk in chunks:
@@ -91,13 +100,11 @@ def create_pptx(title: str, slides_text: str, color_theme: str = "klassik") -> s
         slide_layout = prs.slide_layouts[1] if len(prs.slide_layouts) > 1 else prs.slide_layouts[0]
         slide = prs.slides.add_slide(slide_layout)
         
-        # Sarlavha
         if slide.shapes.title:
             slide.shapes.title.text = s_title
             for paragraph in slide.shapes.title.text_frame.paragraphs:
                 paragraph.font.size = Pt(24)
             
-        # Matn qismi
         if len(slide.placeholders) > 1:
             body_shape = slide.placeholders[1]
             tf = body_shape.text_frame
