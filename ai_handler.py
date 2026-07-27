@@ -33,19 +33,31 @@ def generate_plans(topic, language="uz"):
 
 def get_ai_response(prompt, context="", language="uz"):
     lang_name = get_language_name(language)
-    system_prompt = (
-        f"Siz professional akademik taqdimot yaratuvchisiz. Barcha javoblar FAKAT {lang_name} tilida bo'lsin. "
-        f"Aniq 8 ta slayd tayyorlang. "
-        f"Har bir slaydni quyidagi qat'iy formatda yozing:\n"
-        f"[Slayd 1]\nSarlavha: ...\nMatn: ...\nRasm: (Faqat bitta aniq inglizcha sport so'zi yozing: handball, goalkeeper, stadium, fitness, running, sport)"
-    )
+    
+    # Agar so'ralayotgan narsa Slayd bo'lmasa (Ya'ni Maqola, Tezis, Kurs ishi yoki Dars ishlanmasi bo'lsa):
+    if "slayd" not in context.lower():
+        system_prompt = (
+            f"Siz professional akademik tadqiqotchisiz. Barcha javoblar FAKAT {lang_name} tilida bo'lsin. "
+            f"Hech qanday slayd teglari yoki belgilari ([Slayd 1] va hokazo) ishlatmang. "
+            f"Faqat toza ilmiy matn formatida, kirish, asosiy qism, tahlillar va xulosa qismlaridan iborat mukammal maqola yozing."
+        )
+    else:
+        # Slaydlar uchun maxsus format
+        system_prompt = (
+            f"Siz professional akademik taqdimot yaratuvchisiz. Barcha javoblar FAKAT {lang_name} tilida bo'lsin. "
+            f"Aniq 8 ta slayd tayyorlang. "
+            f"Har bir slaydni quyidagi qat'iy formatda yozing:\n"
+            f"[Slayd 1]\nSarlavha: ...\nMatn: ...\nRasm: (Faqat bitta aniq inglizcha sport so'zi yozing: handball, goalkeeper, stadium, fitness, running, sport)"
+        )
+        
     return _try_openai(system_prompt, prompt)
 
 def create_word(title, content):
     doc = Document()
     doc.add_heading(title, 0)
     for line in content.split('\n'):
-        if line.strip(): doc.add_paragraph(line)
+        if line.strip(): 
+            doc.add_paragraph(line)
     file_path = "Tayyor_Hujjat.docx"
     doc.save(file_path)
     return file_path
