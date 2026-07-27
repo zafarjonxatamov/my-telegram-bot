@@ -1,4 +1,5 @@
 import os
+import re
 from openai import OpenAI
 from pptx import Presentation
 from pptx.util import Inches, Pt
@@ -8,12 +9,18 @@ from config import OPENAI_API_KEY, AI_MODEL
 
 client = OpenAI(api_key=OPENAI_API_KEY)
 
+def clean_text(text: str) -> str:
+    """Markdown belgilarini (**, --- kabilarni) tozalab tashlash"""
+    text = re.sub(r'\*\*', '', text)  # ** larni olib tashlash
+    text = re.sub(r'---', '', text)    # --- larni olib tashlash
+    return text.strip()
+
 def get_ai_slides(prompt: str, count: int = 8) -> str:
     """OpenAI orqali taqdimot matnini generatsiya qilish"""
     response = client.chat.completions.create(
         model=AI_MODEL,
         messages=[
-            {"role": "system", "content": "Siz professional taqdimot matnlarini tuzuvchi mutaxassissiz."},
+            {"role": "system", "content": "Siz professional taqdimot matnlarini tuzuvchi mutaxassissiz. Hech qanday markdown belgilari (**, ---) ishlatmang, faqat toza matn yozing."},
             {"role": "user", "content": f"Mavzu bo'yicha {count} ta slayddan iborat taqdimot matnini tuzib ber.\nHar bir slayd sarlavhasi 'Sarlavha:' bilan, matni esa 'Matn:' bilan boshlansin.\n\n{prompt}"}
         ],
         temperature=0.7
@@ -21,28 +28,14 @@ def get_ai_slides(prompt: str, count: int = 8) -> str:
     return response.choices[0].message.content
 
 def create_pptx(title: str, slides_text: str, color_theme: str = "klassik") -> str:
-    """PowerPoint faylini yaratish"""
+    """PowerPoint faylini toza va chiroyli tarzda yaratish"""
     prs = Presentation()
     
-    # Ranglar sxemasi
-    if color_theme == "qora":
-        bg_color = RGBColor(20, 20, 20)
-        title_color = RGBColor(255, 255, 255)
-        text_color = RGBColor(220, 220, 220)
-    elif color_theme == "kok":
-        bg_color = RGBColor(240, 244, 248)
-        title_color = RGBColor(16, 42, 77)
-        text_color = RGBColor(50, 50, 50)
-    else:
-        bg_color = RGBColor(255, 255, 255)
-        title_color = RGBColor(30, 30, 30)
-        text_color = RGBColor(60, 60, 60)
-
-    # Asosiy sahifa (Sarlavha slaydi)
+    # 1. Asosiy sarlavha slaydi
     slide_layout = prs.slide_layouts[0]
     slide = prs.slides.add_slide(slide_layout)
-    title_box = slide.shapes.title
-    title_box.text = title
+    if slide.shapes.title:
+        slide.shapes.title.text = clean_text(title)
 
     # AI matnini slaydlarga bo'lib chiqish
     slides_data = slides_text.split("Sarlavha:")
@@ -52,15 +45,22 @@ def create_pptx(title: str, slides_text: str, color_theme: str = "klassik") -> s
             continue
         
         parts = s_data.split("Matn:")
-        s_title = parts[0].strip()
-        s_content = parts[1].strip() if len(parts) > 1 else ""
+        s_title = clean_text(parts[0])
+        s_content = clean_text(parts[1]) if len(parts) > 1 else ""
 
-        slide_layout = prs.slide_layouts[1]
+        # Agar sarlavha ichida ortiqcha "Slayd X" so'zlari bo'lsa tozalaymiz
+        s_title = re.sub(r'Slayd\s*\d+', '', s_title).strip()
+        if not s_title:
+            continue
+
+        slide_layout = prs.slide_layouts[1] # Sarlavha va matn layouti
         slide = prs.slides.add_slide(slide_layout)
         
+        # Sarlavha
         if slide.shapes.title:
             slide.shapes.title.text = s_title
         
+        # Matn (body) qismi
         if len(slide.placeholders) > 1:
             body_shape = slide.placeholders[1]
             tf = body_shape.text_frame
