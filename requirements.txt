@@ -5,4 +5,4 @@ requests
 python-pptx
 pypdf
 python-telegram-bot
-python-docx
+docx
