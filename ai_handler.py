@@ -74,21 +74,20 @@ Mavzuni ilmiy, aniq va texnik/metodik jihatdan to'g'ri yoriting. Tajriba yoki ma
 
     "Mavzu bo'yicha slayd": """Siz professional prezentatsiya (Slayd) yaratuvchisiz.
 Matnlar juda qisqa, aniq, ilmiy asoslangan va dizaynga mos bo'lishi kerak.
-Mavzuga umuman aloqasi yo'q so'zlarni (masalan "suv osti yengil atletikasi", "dalchilar" kabi o'ylab topilgan terminlarni) ISHLATMANG! Faqat haqiqiy faktlarni yozing.
+Mavzuga umuman aloqasi yo'q so'zlarni ISHLATMANG! Faqat haqiqiy sport va akademik faktlarni yozing.
 Kamida 8 ta, ko'pi bilan 12 ta slayd tayyorlang.
 
 Har bir slaydni quyidagi formatda qat'iy yozing:
 [Slayd 1]
 Sarlavha: (Mavzuga oid aniq sarlavha)
 Matn: (2-3 ta qisqa, tushunarli bullet point yoki faktlar).
-Rasm: (Faqatgina shu slayd mavzusiga mos Pexels saytidan qidirish uchun BITTA INGLIZCHA SO'Z. Masalan: athletics, stadium, sprint, running, jumping)
+Rasm: (Faqatgina ingliz tilida BITTA SO'Z yozing. Masalan: handball, goalkeeper, sport, stadium, training, team)
 """
 }
 
 def get_structure_guide(context):
     return STRUCTURE_GUIDES.get(context, "Mavzuni to'liq ilmiy, akademik va grammatik jihatdan xatosiz yoriting. Uydirma faktlar ishlatmang.")
 
-# XATOLARNI TUTIB TELEGRAMGA YUBORUVCHI QISM (YANGILANDI)
 def _call_ai(system_prompt, prompt):
     error_msgs = []
     for name, func in [("OpenAI", _try_openai), ("Gemini", _try_gemini)]:
@@ -107,8 +106,7 @@ def get_ai_response(prompt, context="", language="uz"):
         f"Siz O'zbekistonning eng tajribali professori va fan nomzodisiz. "
         f"Sizning vazifangiz universitet talabalari va o'qituvchilari uchun yuqori sifatli, ilmiy materiallar tayyorlash. "
         f"Barcha javoblarni FAKAT VA FAKAT {lang_name} tilida yozing. Boshqa tillarni aralashtirmang. "
-        f"Faktlar 100% to'g'ri, mantiqli va ilmiy tilda bo'lishi shart. Hech qachon mavjud bo'lmagan so'zlarni, g'ayritabiiy qoidalarni yoki mantiqsiz ro'yxatlarni o'ylab topmang. "
-        f"Agar mavzu sport (masalan Yengil atletika) bo'lsa, qoidalar va turlarini to'g'ri yozing (suv osti yengil atletikasi kabi uydirmalar yozmang).\n\n"
+        f"Faktlar 100% to'g'ri, mantiqli va ilmiy tilda bo'lishi shart. Hech qachon mavjud bo'lmagan so'zlarni, g'ayritabiiy qoidalarni yoki mantiqsiz ro'yxatlarni o'ylab topmang.\n\n"
         f"Bo'lim: {context}.\n"
         f"Qat'iy yozish qoidasi:\n{structure}"
     )
@@ -125,9 +123,9 @@ def create_word(title, content):
 
 def _search_pexels_image(query, save_path="temp_slide_image.jpg"):
     if not PEXELS_API_KEY: return None
-    search_query = query.replace("Sarlavha:", "").strip()
-    if len(search_query) < 4:
-        search_query = "education university"
+    search_query = query.replace("Rasm:", "").strip().lower()
+    if len(search_query) < 3 or "qoraqo'l" in search_query or "serang" in search_query:
+        search_query = "handball goalkeeper"
         
     try:
         resp = requests.get(
@@ -137,11 +135,16 @@ def _search_pexels_image(query, save_path="temp_slide_image.jpg"):
             timeout=10
         )
         photos = resp.json().get("photos", [])
-        if not photos: return None
+        if not photos: 
+            resp = requests.get("https://api.pexels.com/v1/search", headers={"Authorization": PEXELS_API_KEY}, params={"query": "sport training", "per_page": 1}, timeout=10)
+            photos = resp.json().get("photos", [])
+            if not photos: return None
+            
         img_resp = requests.get(photos[0]["src"]["large"], timeout=10)
         with open(save_path, "wb") as f: f.write(img_resp.content)
         return save_path
-    except: return None
+    except: 
+        return None
 
 def create_pptx(title, content):
     prs = Presentation()
@@ -160,7 +163,7 @@ def create_pptx(title, content):
             
         slide_title = "Sarlavha yo'q"
         body_text_lines = []
-        image_keyword = "education" 
+        image_keyword = "sport training" 
         
         for line in lines:
             if line.startswith("Sarlavha:"):
