@@ -8,8 +8,11 @@ from config import AI_MODEL, OPENAI_API_KEY, CLAUDE_API_KEY, GEMINI_API_KEY
 
 PEXELS_API_KEY = "EwSRENDIIVaujdEYjtp5WNAr26n67yI5GIJF7oK8gUR1b1yln3z3uSw3"
 
+# 7 TA TIL QAYTARILDI
 LANGUAGE_NAMES = {
-    "uz": "o'zbek", "ru": "rus (Русский)", "en": "ingliz (English)"
+    "uz": "o'zbek", "ru": "rus (Русский)", "en": "ingliz (English)",
+    "kaa": "qoraqalpoq (Qaraqalpaqsha)", "kg": "qirg'iz (Кыргызcha)",
+    "kk": "qozoq (Қазақша)", "tg": "tojik (Тоҷикӣ)",
 }
 
 def get_language_name(lang_code):
@@ -30,7 +33,6 @@ def _try_gemini(system_prompt, prompt):
     if "candidates" in data: return data["candidates"][0]["content"]["parts"][0]["text"]
     raise Exception(data.get("error", {}).get("message", str(data)))
 
-# Faqat qolgan menyular uchun andozalar
 STRUCTURE_GUIDES = {
     "Dars ishlanmasi - Amaliy mashg'ulot": """AMALIY MASHGʻULOT
 MAVZU: [Mavzu nomi]
@@ -100,7 +102,6 @@ def get_structure_guide(context):
     return STRUCTURE_GUIDES.get(context, "Mavzuni ilmiy, professional tarzda aniq yoriting. Matn tushunarli bo'lsin.")
 
 def _call_ai(system_prompt, prompt):
-    # Birinchi OpenAI, keyin Gemini ishlaydi
     for name, func in [("OpenAI", _try_openai), ("Gemini", _try_gemini)]:
         try: return func(system_prompt, prompt)
         except: continue
