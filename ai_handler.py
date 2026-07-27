@@ -150,7 +150,6 @@ def create_pptx(title, content):
     prs = Presentation()
     slide_layout = prs.slide_layouts[1]
     
-    # Slaydlarni to'g'ri bo'laklarga ajratish
     slides_data = content.split('[Slayd')
     
     for s_data in slides_data:
@@ -163,8 +162,22 @@ def create_pptx(title, content):
         if lines[0].endswith(']'): lines = lines[1:] 
         if not lines: continue
             
-        slide_title = lines[0].replace("Sarlavha:", "").strip()
-        body_text = '\n'.join([ln.replace("Matn:", "").strip() for ln in lines[1:]])
+        slide_title = "Sarlavha yo'q"
+        body_text_lines = []
+        image_keyword = "education" # agar rasm kalit so'zi topilmasa, standart rasm
+        
+        # Har bir qatorni analiz qilish
+        for line in lines:
+            if line.startswith("Sarlavha:"):
+                slide_title = line.replace("Sarlavha:", "").strip()
+            elif line.startswith("Matn:"):
+                body_text_lines.append(line.replace("Matn:", "").strip())
+            elif line.startswith("Rasm:"):
+                image_keyword = line.replace("Rasm:", "").strip()
+            elif line and not line.startswith("[") and not line.startswith("Sarlavha") and not line.startswith("Rasm"):
+                body_text_lines.append(line)
+                
+        body_text = '\n'.join(body_text_lines)
         
         slide = prs.slides.add_slide(slide_layout)
         slide.shapes.title.text = slide_title
@@ -174,8 +187,8 @@ def create_pptx(title, content):
         text_placeholder.left, text_placeholder.top = Inches(0.5), Inches(1.5)
         text_placeholder.width, text_placeholder.height = Inches(5.5), Inches(5)
         
-        image_query = slide_title if len(slide_title) > 5 else title
-        image_path = _search_pexels_image(image_query)
+        # Pexels faqat inglizcha kalit so'z bilan qidiradi
+        image_path = _search_pexels_image(image_keyword)
         if image_path and os.path.exists(image_path):
             try: slide.shapes.add_picture(image_path, Inches(6.3), Inches(1.8), width=Inches(3.2))
             except: pass
