@@ -107,13 +107,11 @@ def create_pptx(title, content):
         
         slide = prs.slides.add_slide(blank_layout)
         
-        # Orqa fon rangi (Zamonaviy och kulrang)
         background = slide.background
         fill = background.fill
         fill.solid()
         fill.fore_color.rgb = RGBColor(241, 245, 249)
         
-        # Sarlavha qutisi
         title_box = slide.shapes.add_textbox(Inches(0.8), Inches(0.6), Inches(11.7), Inches(1.0))
         tf_title = title_box.text_frame
         tf_title.word_wrap = True
@@ -123,14 +121,12 @@ def create_pptx(title, content):
         p_title.font.bold = True
         p_title.font.color.rgb = RGBColor(15, 23, 42)
         
-        # Matn uchun zamonaviy oq quti (Card Box)
         card = slide.shapes.add_shape(1, Inches(0.8), Inches(1.8), Inches(7.0), Inches(5.0))
         card.fill.solid()
         card.fill.fore_color.rgb = RGBColor(255, 255, 255)
         card.line.color.rgb = RGBColor(203, 213, 225)
         card.line.width = Pt(1.5)
         
-        # Matnni quti ichiga joylash
         text_box = slide.shapes.add_textbox(Inches(1.0), Inches(2.1), Inches(6.6), Inches(4.4))
         tf_body = text_box.text_frame
         tf_body.word_wrap = True
@@ -139,7 +135,6 @@ def create_pptx(title, content):
         p_body.font.size = Pt(18)
         p_body.font.color.rgb = RGBColor(51, 65, 85)
         
-        # Slaydning o'ng tomoniga mos sport rasmini qo'shish
         image_path = _search_pexels_image(image_keyword)
         if image_path and os.path.exists(image_path):
             try:
