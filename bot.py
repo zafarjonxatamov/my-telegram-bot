@@ -2,7 +2,7 @@ import logging, os, asyncio
 from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 from config import TELEGRAM_TOKEN, ADMIN_ID, CARD_NUMBER, CARD_HOLDER
-from ai_handler import generate_plans, get_ai_slides, create_pptx
+from ai_handler import get_ai_slides, create_pptx
 from database import init_db, get_balance, update_balance, get_language, set_language, create_payment, set_payment_status
 
 logging.basicConfig(level=logging.INFO)
@@ -81,7 +81,6 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             context.user_data['awaiting_payment'] = True
             return
 
-        # Balans yetarli bo'lsa
         update_balance(uid, -price)
         await proceed_after_payment(query.message, context, uid)
         return
@@ -92,11 +91,16 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         uid = query.from_user.id
         topic = context.user_data.get('topic')
-        plans = context.user_data.get('plans', '')
+        r1 = context.user_data.get('reja_1', '')
+        r2 = context.user_data.get('reja_2', '')
+        r3 = context.user_data.get('reja_3', '')
+        r4 = context.user_data.get('reja_4', '')
         p_info = context.user_data.get('price_info')
         
+        full_prompt = f"Mavzu: {topic}\nRejalar:\n1. {r1}\n2. {r2}\n3. {r3}\n4. {r4}"
+        
         try:
-            slides_text = get_ai_slides(f"Mavzu: {topic}\nReja:\n{plans}", p_info['count'])
+            slides_text = get_ai_slides(full_prompt, p_info['count'])
             file_path = create_pptx(topic[:30], slides_text, color)
             
             with open(file_path, 'rb') as f:
@@ -111,13 +115,13 @@ async def proceed_after_payment(message, context, uid):
     p_info = context.user_data.get('price_info')
     if p_info['type'] == 'manual':
         context.user_data['state'] = 'manual_source'
-        await message.reply_text("📥 To'lov qabul qilindi! Iltimos, ushbu ilmiy ish / manba hujjatini (fayl yoki matn ko'rinishida) yuboring. Admin uni shaxsan o'zi tayyorlab beradi.")
+        await message.reply_text("📥 To'lov qabul qilindi! Iltimos, ushbu ilmiy ish / manba hujjatini yuboring. Admin uni shaxsan o'zi tayyorlab beradi.")
     elif p_info['type'] == 'ai_text':
         context.user_data['state'] = 'waiting_source_text'
         await message.reply_text("📄 Premium turdagi taqdimot uchun asosiy matnni yoki faylni yuboring:")
     else:
         context.user_data['state'] = 'waiting_topic'
-        await message.reply_text("✏️ Taqdimot mavzusini kiriting:")
+        await message.reply_text("✏️ Taqdimot mavzusini kiriting:", reply_markup=ReplyKeyboardRemove())
 
 async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = update.message.from_user.id
@@ -143,7 +147,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = update.message.from_user.id
     text = update.message.text
     state = context.user_data.get('state')
-    user_lang = get_language(uid)
 
     if text == "💰 Balansni Tekshirish":
         bal = get_balance(uid)
@@ -164,10 +167,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("🎓 Taqdimot turini tanlang:", reply_markup=InlineKeyboardMarkup(buttons))
         return
 
-    # Qo'lda tayyorlanadiganlar (BMI, Magistr, PhD)
     if state == 'manual_source':
         cat_name = context.user_data.get('selected_cat', 'BMI')
-        caption = f"🎓 **Yangi maxsus buyurtma (Admin uchun)!**\n\n👤 Foydalanuvchi: (ID: `{uid}`)\n📚 Turi: {cat_name}\n\nManba quyida yuborildi:"
+        caption = f"🎓 **Yangi maxsus buyurtma (Admin uchun)!**\n\n👤 Foydalanuvchi ID: `{uid}`\n📚 Turi: {cat_name}\n\nManba quyida yuborildi:"
         if ADMIN_ID:
             await context.bot.send_message(chat_id=int(ADMIN_ID), text=caption, parse_mode="Markdown")
             if update.message.document:
@@ -180,9 +182,30 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if state == 'waiting_topic':
         context.user_data['topic'] = text
-        msg = await update.message.reply_text("⏳ Sun'iy intellekt rejalarni tuzmoqda...")
-        plans = generate_plans(text, user_lang)
-        context.user_data['plans'] = plans
+        context.user_data['state'] = 'waiting_reja_1'
+        await update.message.reply_text("✍️ 1-rejani kiriting:")
+        return
+
+    if state == 'waiting_reja_1':
+        context.user_data['reja_1'] = text
+        context.user_data['state'] = 'waiting_reja_2'
+        await update.message.reply_text("✍️ 2-rejani kiriting:")
+        return
+
+    if state == 'waiting_reja_2':
+        context.user_data['reja_2'] = text
+        context.user_data['state'] = 'waiting_reja_3'
+        await update.message.reply_text("✍️ 3-rejani kiriting:")
+        return
+
+    if state == 'waiting_reja_3':
+        context.user_data['reja_3'] = text
+        context.user_data['state'] = 'waiting_reja_4'
+        await update.message.reply_text("✍️ 4-rejani kiriting:")
+        return
+
+    if state == 'waiting_reja_4':
+        context.user_data['reja_4'] = text
         context.user_data['state'] = 'waiting_color'
         
         keyboard = InlineKeyboardMarkup([
@@ -190,11 +213,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton("⬛ Qora stil", callback_data="color_qora")],
             [InlineKeyboardButton("🟦 Ko'k akademik", callback_data="color_kok")]
         ])
-        await context.bot.edit_message_text(
-            chat_id=uid, message_id=msg.message_id,
-            text=f"📋 **Taklif etilgan rejalar:**\n\n{plans}\n\n🎨 Taqdimot dizayn va rangini tanlang:",
-            reply_markup=keyboard, parse_mode="Markdown"
-        )
+        await update.message.reply_text("🎨 Taqdimot dizayn va rangini tanlang:", reply_markup=keyboard)
         return
 
     await update.message.reply_text("⚠️ Kerakli bo'limni tanlang:", reply_markup=main_keyboard())
@@ -205,5 +224,5 @@ if __name__ == '__main__':
     app.add_handler(MessageHandler(filters.PHOTO | filters.Document.ALL, handle_photo))
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
     app.add_handler(CallbackQueryHandler(handle_callback))
-    print("Mukammal taqdimot boti ishga tushdi...")
+    print("Bot muvaffaqiyatli ishga tushdi...")
     app.run_polling()
