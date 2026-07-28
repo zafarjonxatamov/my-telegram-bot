@@ -6,7 +6,7 @@ from config import TELEGRAM_TOKEN, ADMIN_ID, CARD_NUMBER, CARD_HOLDER
 
 logging.basicConfig(level=logging.INFO)
 
-# Narxlar va muddatlar lug'ati (Kichik buyurtmalar: 24 soat, Katta buyurtmalar: 48-120 soat)
+# Narxlar va bajarilish muddatlari
 PRICES = {
     "Kurs ishi": {"price": 60000, "time": "48 soat"},
     "Diplom ishi": {"price": 700000, "time": "120 soat (5 kun)"},
@@ -17,7 +17,7 @@ PRICES = {
     "Dars ishlanmasi Amaliy": {"price": 5000, "time": "24 soat"},
     "Maqola yozish": {"price": 50000, "time": "72 soat (3 kun)"},
     "Tezis": {"price": 30000, "time": "48 soat"},
-    "Magistrlik dissertatsiyasi": {"price": 0, "time": "Kelishilgan holda"} # 0 - kelishiladi
+    "Magistrlik dissertatsiyasi": {"price": 0, "time": "Kelishilgan holda"}
 }
 
 def init_db():
@@ -44,15 +44,34 @@ def main_keyboard():
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     init_db()
     context.user_data.clear()
+    
+    welcome_text = (
+        "Assalomu alaykum aziz izlanuvchi. Sizga quyidagi xizmatlarni tavsiya qilaman.\n\n"
+        "🚀 <b>O'QITUVCHI VA TALABALAR UCHUN ENG SIFATli XIZMAT!</b>\n\n"
+        "📝 <b>Kurs ishi</b>\n"
+        "🎓 <b>Diplom ishi</b>\n"
+        "📊 <b>Slayd</b>\n"
+        "📖 <b>Dars ishlanmasi:</b> Ma'ruza\n"
+        "📖 <b>Dars ishlanmasi:</b> Seminar\n"
+        "📖 <b>Dars ishlanmasi:</b> Laboratoriya\n"
+        "📖 <b>Dars ishlanmasi:</b> Amaliy\n"
+        "📰 <b>Maqola</b>\n"
+        "📌 <b>Tezis</b>\n"
+        "🎓 <b>Magistrlik dissertatsiyasi</b>\n\n"
+        "✔️ Sifatli xizmat\n"
+        "✔️ Natija kafolatlanadi\n"
+        "✔️ Hamyonbop narxlar\n\n"
+        "📲 <b>Hoziroq buyurtma bering:</b>"
+    )
+    
     await update.message.reply_text(
-        "Assalomu alaykum! Sifatli va professional ilmiy xizmatlar botiga xush kelibsiz.\n"
-        "Barcha ishlar malakali mutaxassislar tomonidan qo'lda bajariladi.",
-        reply_markup=main_keyboard()
+        welcome_text, 
+        reply_markup=main_keyboard(), 
+        parse_mode="HTML"
     )
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
-    uid = update.message.from_user.id
     state = context.user_data.get('state')
 
     if text == "ℹ️ Biz haqimizda / Aloqa":
@@ -68,7 +87,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("🎓 Kerakli xizmat turini tanlang:", reply_markup=InlineKeyboardMarkup(buttons))
         return
 
-    # Mavzu yoki hajm kiritish bosqichi
     if state == 'waiting_topic':
         context.user_data['topic'] = text
         service = context.user_data['selected_service']
@@ -78,22 +96,21 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data['state'] = 'waiting_payment'
         
         confirmation_text = (
-            f"📋 **Buyurtma tafsilotlari:**\n\n"
-            f"• **Xizmat:** {service}\n"
-            f"• **Mavzu/Talab:** {text}\n"
-            f"• **Belgilangan vaqt:** {time_limit}\n"
-            f"• **Narxi:** {price if price > 0 else 'Kelishiladi'} so'm\n\n"
-            f"💳 To'lov uchun karta: `{CARD_NUMBER}` ({CARD_HOLDER})\n\n"
-            f"Iltimos, to'lovni amalga oshirib, **chek rasmini** shu yerga yuboring:"
+            f"📋 <b>Buyurtma tafsilotlari:</b>\n\n"
+            f"• <b>Xizmat:</b> {service}\n"
+            f"• <b>Mavzu/Talab:</b> {text}\n"
+            f"• <b>Belgilangan vaqt:</b> {time_limit}\n"
+            f"• <b>Narxi:</b> {price if price > 0 else 'Kelishiladi'} so'm\n\n"
+            f"💳 To'lov uchun karta: <code>{CARD_NUMBER}</code> ({CARD_HOLDER})\n\n"
+            f"Iltimos, to'lovni amalga oshirib, <b>chek rasmini</b> shu yerga yuboring:"
         )
-        await update.message.reply_text(confirmation_text, parse_mode="Markdown")
+        await update.message.reply_text(confirmation_text, parse_mode="HTML")
         return
 
 async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     data = query.data
-    uid = query.from_user.id
 
     if data.startswith("srv_"):
         service_name = data.replace("srv_", "")
@@ -102,36 +119,34 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         time_limit = PRICES[service_name]['time']
         await query.message.edit_text(
-            f"Siz tanladingiz: **{service_name}**\n"
-            f"⏱ Ushbu xizmat uchun ajratilgan vaqt: **{time_limit}**\n\n"
+            f"Siz tanladingiz: <b>{service_name}</b>\n"
+            f"⏱ Ushbu xizmat uchun ajratilgan vaqt: <b>{time_limit}</b>\n\n"
             f"✍️ Endi buyurtma mavzusini yoki batafsil talablaringizni yozib yuboring:",
-            parse_mode="Markdown"
+            parse_mode="HTML"
         )
         return
 
-    # Admin tomonidan to'lovni tasdiqlash yoki rad etish
     if data.startswith("pay_"):
         parts = data.split("_")
         action = parts[1]
         target_uid = int(parts[2])
         
         if action == "yes":
-            await query.edit_message_caption(caption=query.message.caption + "\n\n✅ **To'lov tasdiqlandi! Ish boshlandi.**", parse_mode="Markdown")
+            await query.edit_message_caption(caption=query.message.caption + "\n\n✅ <b>To'lov tasdiqlandi! Ish boshlandi.</b>", parse_mode="HTML")
             await context.bot.send_message(chat_id=target_uid, text="✅ To'lovingiz admin tomonidan tasdiqlandi! Mutaxassis ishni boshladi, tayyor bo'lgach sizga yuboriladi.")
             
-            # Adminga buyurtma topshirig'i ketdi
             service = context.user_data.get('selected_service', 'Nomaqbul')
             topic = context.user_data.get('topic', 'Kiritilmagan')
             admin_msg = (
-                f"🚨 **Yangi tasdiqlangan buyurtma!**\n\n"
-                f"👤 Mijoz ID: `{target_uid}`\n"
+                f"🚨 <b>Yangi tasdiqlangan buyurtma!</b>\n\n"
+                f"👤 Mijoz ID: <code>{target_uid}</code>\n"
                 f"📚 Xizmat: {service}\n"
                 f"📝 Mavzu: {topic}\n\n"
-                f"*(Ishni bajarib bo'lgach, tayyor faylni to'g'ridan-to'g'ri shu mijozga yuborishingiz mumkin)*"
+                f"<i>(Ishni bajarib bo'lgach, tayyor faylni to'g'ridan-to'g'ri shu mijozga yuborishingiz mumkin)</i>"
             )
-            await context.bot.send_message(chat_id=int(ADMIN_ID), text=admin_msg, parse_mode="Markdown")
+            await context.bot.send_message(chat_id=int(ADMIN_ID), text=admin_msg, parse_mode="HTML")
         else:
-            await query.edit_message_caption(caption=query.message.caption + "\n\n❌ **To'lov rad etildi.**", parse_mode="Markdown")
+            await query.edit_message_caption(caption=query.message.caption + "\n\n❌ <b>To'lov rad etildi.</b>", parse_mode="HTML")
             await context.bot.send_message(chat_id=target_uid, text="❌ To'lov cheki yaroqsiz deb topildi. Iltimos, qaytadan urinib ko'ring.")
         return
 
@@ -143,8 +158,8 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     topic = context.user_data.get('topic', 'Kiritilmagan')
 
     caption = (
-        f"💳 **Yangi to'lov cheki keldi!**\n\n"
-        f"👤 Foydalanuvchi: @{username} (ID: `{uid}`)\n"
+        f"💳 <b>Yangi to'lov cheki keldi!</b>\n\n"
+        f"👤 Foydalanuvchi: @{username} (ID: <code>{uid}</code>)\n"
         f"📚 Xizmat: {service}\n"
         f"📝 Mavzu: {topic}"
     )
@@ -155,7 +170,7 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]])
 
     if ADMIN_ID:
-        await context.bot.send_photo(chat_id=int(ADMIN_ID), photo=file_id, caption=caption, reply_markup=keyboard, parse_mode="Markdown")
+        await context.bot.send_photo(chat_id=int(ADMIN_ID), photo=file_id, caption=caption, reply_markup=keyboard, parse_mode="HTML")
         await update.message.reply_text("✅ Chek admingacha yuborildi. Admin tasdiqlashini kuting!")
 
 if __name__ == '__main__':
@@ -164,5 +179,5 @@ if __name__ == '__main__':
     app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
     app.add_handler(CallbackQueryHandler(handle_callback))
-    print("Inson omiliga asoslangan buyurtma boti ishga tushdi...")
+    print("Bot muvaffaqiyatli ishga tushdi...")
     app.run_polling()
