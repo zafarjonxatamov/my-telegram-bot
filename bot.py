@@ -21,9 +21,9 @@ PRICES = {
 
 # Slayd turlari va har bir list uchun narxlar
 SLIDE_TYPES = {
-    "slide_standard": {"name": "Standard (1 list)", "price_per_page": 1000},
-    "slide_standard_plus": {"name": "Standard + (1 list)", "price_per_page": 1500},
-    "slide_premium": {"name": "Premium (1 list)", "price_per_page": 2000}
+    "slide_standard": {"name": "Standard (1 listi 1 000 so'm)", "price_per_page": 1000},
+    "slide_standard_plus": {"name": "Standard + (1 listi 1 500 so'm)", "price_per_page": 1500},
+    "slide_premium": {"name": "Premium (1 listi 2 000 so'm)", "price_per_page": 2000}
 }
 
 SLIDE_PAGES = [4, 6, 8]
@@ -88,12 +88,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if text == "📝 Buyurtma berish":
         buttons = []
-        # Asosiy xizmatlar
         for service_name, info in PRICES.items():
             price_str = f"{info['price']} so'm" if info['price'] > 0 else "Kelishiladi"
             buttons.append([InlineKeyboardButton(f"{service_name} — {price_str}", callback_data=f"srv_{service_name}")])
         
-        # Slayd bo'limi (alohida tugma sifatida)
         buttons.append([InlineKeyboardButton("📊 Slayd", callback_data="srv_Slayd")])
         
         await update.message.reply_text("🎓 Kerakli xizmat turini tanlang:", reply_markup=InlineKeyboardMarkup(buttons))
@@ -103,8 +101,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data['topic'] = text
         service = context.user_data['selected_service']
         
-        # Agar slayd bo'lsa hisoblangan narxni olamiz, aks holda oddiy narx
-        if service == "Slayd":
+        if "Slayd" in service:
             price = context.user_data['total_price']
             time_limit = "24 soat"
         else:
@@ -130,14 +127,32 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     data = query.data
 
+    # Orqaga qaytish tugmalari
+    if data == "back_to_services":
+        buttons = []
+        for service_name, info in PRICES.items():
+            price_str = f"{info['price']} so'm" if info['price'] > 0 else "Kelishiladi"
+            buttons.append([InlineKeyboardButton(f"{service_name} — {price_str}", callback_data=f"srv_{service_name}")])
+        buttons.append([InlineKeyboardButton("📊 Slayd", callback_data="srv_Slayd")])
+        await query.message.edit_text("🎓 Kerakli xizmat turini tanlang:", reply_markup=InlineKeyboardMarkup(buttons))
+        return
+
+    if data == "back_to_slide_types":
+        slide_buttons = []
+        for key, val in SLIDE_TYPES.items():
+            slide_buttons.append([InlineKeyboardButton(val['name'], callback_data=f"sltype_{key}")])
+        slide_buttons.append([InlineKeyboardButton("🔙 Orqaga", callback_data="back_to_services")])
+        await query.message.edit_text("📊 Slayd turini tanlang:", reply_markup=InlineKeyboardMarkup(slide_buttons))
+        return
+
     if data.startswith("srv_"):
         service_name = data.replace("srv_", "")
         
         if service_name == "Slayd":
-            # Slayd tanlanganda 3 ta tur chiqadi
             slide_buttons = []
             for key, val in SLIDE_TYPES.items():
                 slide_buttons.append([InlineKeyboardButton(val['name'], callback_data=f"sltype_{key}")])
+            slide_buttons.append([InlineKeyboardButton("🔙 Orqaga", callback_data="back_to_services")])
             await query.message.edit_text("📊 Slayd turini tanlang:", reply_markup=InlineKeyboardMarkup(slide_buttons))
             return
 
@@ -145,15 +160,19 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data['state'] = 'waiting_topic'
         
         time_limit = PRICES[service_name]['time']
+        
+        # Orqaga tugmasi bilan birga xabar
+        keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Orqaga", callback_data="back_to_services")]])
+        
         await query.message.edit_text(
             f"Siz tanladingiz: <b>{service_name}</b>\n"
             f"⏱ Ushbu xizmat uchun ajratilgan vaqt: <b>{time_limit}</b>\n\n"
             f"✍️ Endi buyurtma mavzusini yoki batafsil talablaringizni yozib yuboring:",
+            reply_markup=keyboard,
             parse_mode="HTML"
         )
         return
 
-    # Slayd turi tanlanganda listlar sonini chiqarish
     if data.startswith("sltype_"):
         slide_key = data.replace("sltype_", "")
         context.user_data['slide_type'] = slide_key
@@ -161,11 +180,11 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         page_buttons = []
         for pages in SLIDE_PAGES:
             page_buttons.append([InlineKeyboardButton(f"{pages} list", callback_data=f"slpages_{pages}")])
+        page_buttons.append([InlineKeyboardButton("🔙 Orqaga", callback_data="back_to_slide_types")])
         
         await query.message.edit_text("📄 Slayd hajmini (listlar sonini) tanlang:", reply_markup=InlineKeyboardMarkup(page_buttons))
         return
 
-    # Listlar soni tanlanganda narxni hisoblash va mavzu so'rashga o'tish
     if data.startswith("slpages_"):
         pages = int(data.replace("slpages_", ""))
         slide_key = context.user_data.get('slide_type')
@@ -177,11 +196,14 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data['total_price'] = total_price
         context.user_data['state'] = 'waiting_topic'
 
+        keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Orqaga", callback_data=f"sltype_{slide_key}")]])
+
         await query.message.edit_text(
             f"Siz tanladingiz: <b>{slide_info['name']} — {pages} list</b>\n"
             f"💰 Hisoblangan narx: <b>{total_price} so'm</b>\n"
             f"⏱ Vaqt: <b>24 soat</b>\n\n"
             f"✍️ Endi slayd mavzusini yoki talablarni yozib yuboring:",
+            reply_markup=keyboard,
             parse_mode="HTML"
         )
         return
