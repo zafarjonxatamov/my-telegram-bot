@@ -89,7 +89,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if text == "📝 Buyurtma berish":
         buttons = []
         for service_name, info in PRICES.items():
-            price_str = f"{info['price']} so'm" if info['price'] > 0 else "Kelishiladi"
+            if service_name == "Magistrlik dissertatsiyasi":
+                price_str = "Kelishilgan holda"
+            else:
+                price_str = f"{info['price']} so'm"
             buttons.append([InlineKeyboardButton(f"{service_name} — {price_str}", callback_data=f"srv_{service_name}")])
         
         buttons.append([InlineKeyboardButton("📊 Slayd", callback_data="srv_Slayd")])
@@ -115,7 +118,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"• <b>Xizmat:</b> {service}\n"
             f"• <b>Mavzu/Talab:</b> {text}\n"
             f"• <b>Belgilangan vaqt:</b> {time_limit}\n"
-            f"• <b>Narxi:</b> {price if price > 0 else 'Kelishiladi'} so'm\n\n"
+            f"• <b>Narxi:</b> {price} so'm\n\n"
             f"💳 To'lov uchun karta: <code>{CARD_NUMBER}</code> ({CARD_HOLDER})\n\n"
             f"Iltimos, to'lovni amalga oshirib, <b>chek rasmini</b> shu yerga yuboring:"
         )
@@ -127,11 +130,13 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     data = query.data
 
-    # Orqaga qaytish tugmalari
     if data == "back_to_services":
         buttons = []
         for service_name, info in PRICES.items():
-            price_str = f"{info['price']} so'm" if info['price'] > 0 else "Kelishiladi"
+            if service_name == "Magistrlik dissertatsiyasi":
+                price_str = "Kelishilgan holda"
+            else:
+                price_str = f"{info['price']} so'm"
             buttons.append([InlineKeyboardButton(f"{service_name} — {price_str}", callback_data=f"srv_{service_name}")])
         buttons.append([InlineKeyboardButton("📊 Slayd", callback_data="srv_Slayd")])
         await query.message.edit_text("🎓 Kerakli xizmat turini tanlang:", reply_markup=InlineKeyboardMarkup(buttons))
@@ -148,6 +153,21 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if data.startswith("srv_"):
         service_name = data.replace("srv_", "")
         
+        # Magistrlik dissertatsiyasi tanlanganda admin bilan bog'lanishga yo'naltirish
+        if service_name == "Magistrlik dissertatsiyasi":
+            keyboard = InlineKeyboardMarkup([
+                [InlineKeyboardButton("💬 Admin bilan bog'lanish", url=f"tg://user?id={ADMIN_ID}")],
+                [InlineKeyboardButton("🔙 Orqaga", callback_data="back_to_services")]
+            ])
+            await query.message.edit_text(
+                "🎓 <b>Magistrlik dissertatsiyasi</b>\n\n"
+                "⏱️ <b>Ushbu xizmat uchun ajratilgan vaqt va narx:</b> Kelishilgan holda\n\n"
+                "Batafsil ma'lumot olish va narxini kelishish uchun admin bilan bevosita bog'laning:",
+                reply_markup=keyboard,
+                parse_mode="HTML"
+            )
+            return
+
         if service_name == "Slayd":
             slide_buttons = []
             for key, val in SLIDE_TYPES.items():
@@ -160,8 +180,6 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data['state'] = 'waiting_topic'
         
         time_limit = PRICES[service_name]['time']
-        
-        # Orqaga tugmasi bilan birga xabar
         keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Orqaga", callback_data="back_to_services")]])
         
         await query.message.edit_text(
