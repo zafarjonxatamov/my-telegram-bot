@@ -3,6 +3,7 @@ import sqlite3
 from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 from config import TELEGRAM_TOKEN, ADMIN_ID, CARD_NUMBER, CARD_HOLDER
+from database import init_db, add_user, create_payment, get_balance, update_balance
 
 logging.basicConfig(level=logging.INFO)
 
@@ -19,6 +20,7 @@ PRICES = {
     "Magistrlik dissertatsiyasi": {"price": 0, "time": "Kelishilgan holda"}
 }
 
+# Slayd turlari va har bir list uchun narxlar
 SLIDE_TYPES = {
     "slide_standard": {"name": "Standard (1 listi 1 000 so'm)", "price_per_page": 1000},
     "slide_standard_plus": {"name": "Standard + (1 listi 1 500 so'm)", "price_per_page": 1500},
@@ -27,53 +29,16 @@ SLIDE_TYPES = {
 
 SLIDE_PAGES = [4, 6, 8]
 
-def init_db():
-    conn = sqlite3.connect("bot_database.db")
-    cursor = conn.cursor()
-    # Foydalanuvchilarni saqlash uchun jadval (username ham qo'shildi)
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS bot_users (
-            user_id INTEGER PRIMARY KEY,
-            username TEXT
-        )
-    """)
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS orders (
-            order_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            service TEXT,
-            topic TEXT,
-            status TEXT DEFAULT 'pending'
-        )
-    """)
-    conn.commit()
-    conn.close()
-
-def save_user(user_id, username):
-    """Foydalanuvchi botga kirganda bazaga saqlaydi yoki yangilaydi"""
-    conn = sqlite3.connect("bot_database.db")
-    cursor = conn.cursor()
-    cursor.execute("""
-        INSERT INTO bot_users (user_id, username) VALUES (?, ?)
-        ON CONFLICT(user_id) DO UPDATE SET username=excluded.username
-    """, (user_id, username))
-    conn.commit()
-    conn.close()
-
-def main_keyboard(user_id):
-    keyboard = [
+def main_keyboard():
+    return ReplyKeyboardMarkup([
         ["📝 Buyurtma berish"],
         ["ℹ️ Biz haqimizda / Aloqa"]
-    ]
-    # Agar foydalanuvchi admin bo'lsa, adminga maxsus tugma qo'shamiz
-    if user_id == ADMIN_ID:
-        keyboard.append(["👥 Foydalanuvchilar soni va ro'yxati"])
-    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+    ], resize_keyboard=True)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     init_db()
-    user = update.message.from_user
-    save_user(user.id, user.username)
+    user_id = update.effective_user.id
+    add_user(user_id)  # Foydalanuvchini bazaga qo'shish
     context.user_data.clear()
     
     welcome_text = (
@@ -97,42 +62,16 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     await update.message.reply_text(
         welcome_text, 
-        reply_markup=main_keyboard(user.id), 
+        reply_markup=main_keyboard(), 
         parse_mode="HTML"
     )
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.message.from_user
-    save_user(user.id, user.username) # Har bir xatorda foydalanuvchini bazaga yangilab boramiz
     text = update.message.text
     state = context.user_data.get('state')
 
     if text == "ℹ️ Biz haqimizda / Aloqa":
         await update.message.reply_text("Barcha buyurtmalar mutaxassislar tomonidan individual tarzda va yuqori sifatda bajariladi.")
-        return
-
-    # Admin uchun foydalanuvchilar ro'yxatini chiqarish tugmasi
-    if text == "👥 Foydalanuvchilar soni va ro'yxati" and user.id == ADMIN_ID:
-        conn = sqlite3.connect("bot_database.db")
-        cursor = conn.cursor()
-        cursor.execute("SELECT user_id, username FROM bot_users")
-        users = cursor.fetchall()
-        conn.close()
-
-        total_users = len(users)
-        msg = f"📊 <b>Botdagi jami foydalanuvchilar soni:</b> {total_users} ta\n\n<b>Ro'yxat:</b>\n"
-        
-        for idx, (uid, uname) in enumerate(users, 1):
-            username_str = f"@{uname}" if uname else "Username yo'q"
-            msg += f"{idx}. ID: <code>{uid}</code> — {username_str}\n"
-            # Telegram xabar uzunligi cheklovi (4096 belgi) sababli uzun matnni bo'lib yuborish mumkin, 
-            # agar foydalanuvchilar juda ko'p bo'lmasa bu holat yetarli.
-            if len(msg) > 4000:
-                await update.message.reply_text(msg, parse_mode="HTML")
-                msg = ""
-        
-        if msg:
-            await update.message.reply_text(msg, parse_mode="HTML")
         return
 
     if text == "📝 Buyurtma berish":
@@ -301,11 +240,17 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = update.message.from_user.id
     username = update.message.from_user.username or "Noma'lum"
-    save_user(uid, username)
-    
     file_id = update.message.photo[-1].file_id
     service = context.user_data.get('selected_service', 'Nomaqbul')
     topic = context.user_data.get('topic', 'Kiritilmagan')
+    
+    # Ma'lumotlar bazasiga buyurtmani qayd etish
+    if "Slayd" in service:
+        amount = context.user_data.get('total_price', 0)
+    else:
+        amount = PRICES.get(service, {}).get('price', 0)
+    
+    create_payment(user_id=uid, amount=amount, file_id=file_id, category=service, topic=topic)
 
     caption = (
         f"💳 <b>Yangi to'lov cheki keldi!</b>\n\n"
