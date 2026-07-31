@@ -29,11 +29,15 @@ SLIDE_TYPES = {
 
 SLIDE_PAGES = [4, 6, 8]
 
-def main_keyboard():
-    return ReplyKeyboardMarkup([
+def main_keyboard(user_id):
+    keyboard = [
         ["📝 Buyurtma berish"],
         ["ℹ️ Biz haqimizda / Aloqa"]
-    ], resize_keyboard=True)
+    ]
+    # Agar foydalanuvchi admin bo'lsa, "Foydalanuvchilar soni" tugmasini qo'shamiz
+    if str(user_id) == str(ADMIN_ID):
+        keyboard.append(["👥 Foydalanuvchilar soni"])
+    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     init_db()
@@ -62,13 +66,25 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     await update.message.reply_text(
         welcome_text, 
-        reply_markup=main_keyboard(), 
+        reply_markup=main_keyboard(user_id), 
         parse_mode="HTML"
     )
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     state = context.user_data.get('state')
+    user_id = update.effective_user.id
+
+    # Admin uchun foydalanuvchilar sonini chiqarish
+    if text == "👥 Foydalanuvchilar soni" and str(user_id) == str(ADMIN_ID):
+        conn = sqlite3.connect('bot_database.db')
+        cursor = conn.cursor()
+        cursor.execute('SELECT COUNT(*) FROM users')
+        count = cursor.fetchone()[0]
+        conn.close()
+        
+        await update.message.reply_text(f"📊 <b>Botdagi jami foydalanuvchilar soni:</b> {count} ta", parse_mode="HTML")
+        return
 
     if text == "ℹ️ Biz haqimizda / Aloqa":
         await update.message.reply_text("Barcha buyurtmalar mutaxassislar tomonidan individual tarzda va yuqori sifatda bajariladi.")
@@ -241,7 +257,7 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.message.from_user
     uid = user.id
     
-    # Username bo'lmasa ismini bosiladigan havola qilamiz
+    # Username mavjud bo'lmasa ismini bosiladigan havola qilamiz
     if user.username:
         user_info = f"@{user.username}"
     else:
