@@ -34,7 +34,7 @@ def main_keyboard(user_id):
         ["📝 Buyurtma berish"],
         ["ℹ️ Biz haqimizda / Aloqa"]
     ]
-    # Agar foydalanuvchi admin bo'lsa, "Foydalanuvchilar soni" tugmasini qo'shamiz
+    # Admin uchun maxsus tugma
     if str(user_id) == str(ADMIN_ID):
         keyboard.append(["👥 Foydalanuvchilar soni"])
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
@@ -257,12 +257,12 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.message.from_user
     uid = user.id
     
-    # Username mavjud bo'lmasa ismini bosiladigan havola qilamiz
+    # Ismi va username'ni birga ko'rsatish
+    first_name = user.first_name or "Foydalanuvchi"
     if user.username:
-        user_info = f"@{user.username}"
+        user_info = f"{first_name} (@{user.username})"
     else:
-        user_name = user.first_name or "Foydalanuvchi"
-        user_info = f"<a href='tg://user?id={uid}'>{user_name}</a>"
+        user_info = f"<a href='tg://user?id={uid}'>{first_name}</a>"
 
     file_id = update.message.photo[-1].file_id
     service = context.user_data.get('selected_service', 'Nomaqbul')
