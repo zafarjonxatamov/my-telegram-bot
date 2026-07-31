@@ -43,7 +43,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     welcome_text = (
         "Assalomu alaykum aziz izlanuvchi. Sizga quyidagi xizmatlarni tavsiya qilaman.\n\n"
-        "🚀 <b>O'QITUVCHI VA TALABALAR UCHUN ENG SIFATli XIZMAT!</b>\n\n"
+        "🚀 <b>O'QITUVCHI VA TALABALAR UCHUN ENG SIFATLI XIZMAT!</b>\n\n"
         "📝 <b>Kurs ishi</b>\n"
         "🎓 <b>Diplom ishi</b>\n"
         "📊 <b>Slayd</b>\n"
@@ -238,8 +238,16 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
 async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    uid = update.message.from_user.id
-    username = update.message.from_user.username or "Noma'lum"
+    user = update.message.from_user
+    uid = user.id
+    
+    # Username bo'lmasa ismini bosiladigan havola qilamiz
+    if user.username:
+        user_info = f"@{user.username}"
+    else:
+        user_name = user.first_name or "Foydalanuvchi"
+        user_info = f"<a href='tg://user?id={uid}'>{user_name}</a>"
+
     file_id = update.message.photo[-1].file_id
     service = context.user_data.get('selected_service', 'Nomaqbul')
     topic = context.user_data.get('topic', 'Kiritilmagan')
@@ -254,7 +262,7 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     caption = (
         f"💳 <b>Yangi to'lov cheki keldi!</b>\n\n"
-        f"👤 Foydalanuvchi: @{username} (ID: <code>{uid}</code>)\n"
+        f"👤 Foydalanuvchi: {user_info} (ID: <code>{uid}</code>)\n"
         f"📚 Xizmat: {service}\n"
         f"📝 Mavzu: {topic}"
     )
